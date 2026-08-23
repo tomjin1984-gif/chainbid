@@ -1,5 +1,5 @@
+/* eslint-disable @next/next/no-html-link-for-pages -- Public Sites navigation must work without client router hydration. */
 /* eslint-disable @next/next/no-img-element -- Brand logo uses the exported static SVG asset. */
-import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getRepository } from "@/lib/repository";
 
@@ -19,7 +19,7 @@ export async function GlobalHeader() {
     <header className="global-header">
       <div className="global-header-inner">
         <nav className="corner-nav" aria-label="Primary">
-          <Link href="/" className="brand-mark" aria-label="Chain.bid home">
+          <a href="/" className="brand-mark" aria-label="Chain.bid home">
             <img
               className="brand-logo"
               src="/brand/chain-bid-logo.svg"
@@ -28,13 +28,13 @@ export async function GlobalHeader() {
               height={34}
             />
             <span>Chain.bid</span>
-          </Link>
+          </a>
           <div className="topbar-actions">
             <div className="topbar-links">
-              <Link href="/#leaderboard">Leaderboard</Link>
-              <Link href="/categories">Categories</Link>
-              <Link href="/rules">Rules</Link>
-              <Link href="/about">About</Link>
+              <a href="/#leaderboard">Leaderboard</a>
+              <a href="/categories">Categories</a>
+              <a href="/rules">Rules</a>
+              <a href="/about">About</a>
             </div>
             <ThemeToggle />
           </div>
@@ -46,7 +46,7 @@ export async function GlobalHeader() {
           <span>·</span>
           <span>{totalClicks.toLocaleString()} visitors since launch</span>
           <span>·</span>
-          <Link href="/#leaderboard">see stats→</Link>
+          <a href="/#leaderboard">see stats→</a>
         </div>
       </div>
     </header>

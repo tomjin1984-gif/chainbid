@@ -1,5 +1,4 @@
-import Link from "next/link";
-
+/* eslint-disable @next/next/no-html-link-for-pages -- Public Sites navigation must work without client router hydration. */
 export const metadata = {
   title: "Rules",
   description: "Bidding, payment safety, risk warnings, and disclaimer for Chain.bid.",
@@ -85,9 +84,9 @@ export default function RulesPage() {
       <div className="footer-links rules-footer">
         <span>Chain.bid</span>
         <span>·</span>
-        <Link href="/#leaderboard">Live stats</Link>
+        <a href="/#leaderboard">Live stats</a>
         <span>·</span>
-        <Link href="/categories">Categories</Link>
+        <a href="/categories">Categories</a>
       </div>
     </main>
   );

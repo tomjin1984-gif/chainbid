@@ -1,5 +1,4 @@
 /* eslint-disable @next/next/no-img-element -- Project icons come from arbitrary submitted URLs. */
-import Link from "next/link";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { Fragment } from "react";
@@ -235,14 +234,14 @@ function ProjectRankCard({
         <strong>{formatUsdt(project.totalBidUsdt)}</strong>
         <small>pass at {formatUsdt(project.nextRankTargetUsdt)}</small>
       </div>
-      <Link
+      <a
         href={`/submit?boost=${project.slug}&target=${project.nextRankTargetUsdt.toString()}`}
         className="button button-small rank-action"
         aria-label={`Boost ${project.name}`}
       >
         Boost
         <ArrowUpRight size={16} />
-      </Link>
+      </a>
     </article>
   );
 }
@@ -284,9 +283,9 @@ function LeaderboardPagination({
       <div className="pagination-main">
         <div className="pagination-pages">
           {currentPage > 1 ? (
-            <Link className="page-control" href={pageHref(previousPage)} aria-label="Previous page">
+            <a className="page-control" href={pageHref(previousPage)} aria-label="Previous page">
               <ArrowLeft size={16} />
-            </Link>
+            </a>
           ) : (
             <span className="page-control page-control-disabled" aria-hidden="true">
               <ArrowLeft size={16} />
@@ -303,16 +302,16 @@ function LeaderboardPagination({
                 {page}
               </span>
             ) : (
-              <Link className="page-number" href={pageHref(page)} key={page}>
+              <a className="page-number" href={pageHref(page)} key={page}>
                 {page}
-              </Link>
+              </a>
             )
           ))}
 
           {currentPage < pageCount ? (
-            <Link className="page-control" href={pageHref(nextPage)} aria-label="Next page">
+            <a className="page-control" href={pageHref(nextPage)} aria-label="Next page">
               <ArrowRight size={16} />
-            </Link>
+            </a>
           ) : (
             <span className="page-control page-control-disabled" aria-hidden="true">
               <ArrowRight size={16} />
@@ -324,10 +323,10 @@ function LeaderboardPagination({
         </span>
       </div>
 
-      <Link className="refresh-button" href={pageHref(currentPage)}>
+      <a className="refresh-button" href={pageHref(currentPage)}>
         <RefreshCw size={14} />
         Refresh
-      </Link>
+      </a>
     </nav>
   );
 }
@@ -435,13 +434,13 @@ export default async function Home({
 
         <div id="categories" className="category-row category-bar" aria-label="Leaderboard categories">
           {categories.map((category) => (
-            <Link
+            <a
               key={category}
               href={category === "All" ? "/" : `/?category=${encodeURIComponent(category)}`}
               className={category === activeCategory ? "chip chip-active" : "chip"}
             >
               {category}
-            </Link>
+            </a>
           ))}
         </div>
 
@@ -486,7 +485,7 @@ export default async function Home({
         <div className="footer-links">
           <span>Chain.bid</span>
           <span>·</span>
-          <Link href="/rules">Rules</Link>
+          <a href="/rules">Rules</a>
           <span>·</span>
           <a href="#leaderboard">Live stats</a>
         </div>

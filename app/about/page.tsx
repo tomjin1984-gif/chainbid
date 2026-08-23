@@ -1,5 +1,4 @@
-import Link from "next/link";
-
+/* eslint-disable @next/next/no-html-link-for-pages -- Public Sites navigation must work without client router hydration. */
 export const metadata = {
   title: "About",
   description: "The story, purpose, and public payment addresses behind Chain.bid.",
@@ -85,9 +84,9 @@ export default function AboutPage() {
       </section>
 
       <div className="about-join">
-        <Link className="button" href="/#leaderboard">
+        <a className="button" href="/#leaderboard">
           Join us
-        </Link>
+        </a>
       </div>
     </main>
   );

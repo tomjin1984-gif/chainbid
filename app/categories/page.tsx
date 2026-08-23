@@ -1,4 +1,4 @@
-import Link from "next/link";
+/* eslint-disable @next/next/no-html-link-for-pages -- Public Sites navigation must work without client router hydration. */
 import {
   BadgeDollarSign,
   Bitcoin,
@@ -74,7 +74,7 @@ export default function CategoriesPage() {
           const Icon = iconForCategory(category);
 
           return (
-            <Link
+            <a
               className="category-card"
               href={`/?category=${encodeURIComponent(category)}#leaderboard`}
               key={category}
@@ -83,7 +83,7 @@ export default function CategoriesPage() {
                 <Icon size={20} strokeWidth={2.2} />
               </span>
               <strong>{category}</strong>
-            </Link>
+            </a>
           );
         })}
       </section>
@@ -91,9 +91,9 @@ export default function CategoriesPage() {
       <div className="footer-links categories-footer">
         <span>Chain.bid</span>
         <span>·</span>
-        <Link href="/rules">Rules</Link>
+        <a href="/rules">Rules</a>
         <span>·</span>
-        <Link href="/#leaderboard">Live stats</Link>
+        <a href="/#leaderboard">Live stats</a>
       </div>
     </main>
   );

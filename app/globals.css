@@ -16,10 +16,10 @@
 html[data-theme="light"] {
   --background: #f5f8f7;
   --foreground: #101820;
-  --muted: #66737f;
-  --line: rgba(12, 24, 32, 0.14);
-  --panel: rgba(12, 24, 32, 0.045);
-  --panel-strong: rgba(12, 24, 32, 0.08);
+  --muted: #465461;
+  --line: rgba(12, 24, 32, 0.2);
+  --panel: rgba(255, 255, 255, 0.68);
+  --panel-strong: rgba(255, 255, 255, 0.84);
   --accent: #00b889;
   --accent-2: #8bec47;
   --warning: #d49a16;
@@ -255,7 +255,84 @@ html[data-theme="light"] .activity-pill small,
 html[data-theme="light"] .activity-pill div > span,
 html[data-theme="light"] .pagination-range,
 html[data-theme="light"] .page-ellipsis {
-  color: #65727e;
+  color: #4d5a66;
+}
+
+html[data-theme="light"] .chip {
+  border-color: rgba(12, 24, 32, 0.2);
+  background: rgba(255, 255, 255, 0.78);
+  color: #53616d;
+}
+
+html[data-theme="light"] .chip:hover,
+html[data-theme="light"] .page-number,
+html[data-theme="light"] .page-control,
+html[data-theme="light"] .footer-links a {
+  color: #0f1a22;
+}
+
+html[data-theme="light"] .chip-active {
+  border-color: var(--accent-2);
+  background: var(--accent-2);
+  color: #05110d;
+}
+
+html[data-theme="light"] .latest-activity-heading,
+html[data-theme="light"] .project-name,
+html[data-theme="light"] .domain,
+html[data-theme="light"] .rank-bid strong,
+html[data-theme="light"] .site-stats-footer p:first-child,
+html[data-theme="light"] .form-header h1,
+html[data-theme="light"] .detail-main h1,
+html[data-theme="light"] .legal-page h1,
+html[data-theme="light"] .admin-header h1 {
+  color: #111820;
+}
+
+html[data-theme="light"] .form-panel,
+html[data-theme="light"] .side-note,
+html[data-theme="light"] .checkout-panel,
+html[data-theme="light"] .history-panel,
+html[data-theme="light"] .admin-card,
+html[data-theme="light"] .narrow-panel {
+  border-color: rgba(12, 24, 32, 0.16);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+html[data-theme="light"] label {
+  color: #31404c;
+}
+
+html[data-theme="light"] input,
+html[data-theme="light"] select,
+html[data-theme="light"] textarea {
+  border-color: rgba(12, 24, 32, 0.18);
+  background: rgba(255, 255, 255, 0.86);
+  color: #101820;
+}
+
+html[data-theme="light"] input::placeholder,
+html[data-theme="light"] textarea::placeholder {
+  color: #697682;
+}
+
+html[data-theme="light"] .network-option {
+  border-color: rgba(12, 24, 32, 0.16);
+  background: rgba(255, 255, 255, 0.72);
+  color: #101820;
+}
+
+html[data-theme="light"] .network-active {
+  border-color: rgba(0, 184, 137, 0.5);
+  background: rgba(0, 184, 137, 0.14);
+}
+
+html[data-theme="light"] .network-option small,
+html[data-theme="light"] .muted-copy,
+html[data-theme="light"] .history-row small,
+html[data-theme="light"] .side-note p,
+html[data-theme="light"] .legal-page p {
+  color: #53616d;
 }
 
 .hero-grid {
