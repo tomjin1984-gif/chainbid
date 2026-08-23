@@ -26,7 +26,7 @@ import { categories, type Category } from "@/lib/seed";
 
 export const metadata = {
   title: "Categories",
-  description: "Browse every chain.bid category and open its live ranking.",
+  description: "Browse every Chain.bid category and open its live ranking.",
 };
 
 const categoryIcons: Record<Exclude<Category, "All">, LucideIcon> = {
@@ -89,7 +89,7 @@ export default function CategoriesPage() {
       </section>
 
       <div className="footer-links categories-footer">
-        <span>chain.bid</span>
+        <span>Chain.bid</span>
         <span>·</span>
         <Link href="/rules">Rules</Link>
         <span>·</span>

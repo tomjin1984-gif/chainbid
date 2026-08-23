@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export const metadata = {
   title: "Rules",
-  description: "Bidding, payment safety, risk warnings, and disclaimer for chain.bid.",
+  description: "Bidding, payment safety, risk warnings, and disclaimer for Chain.bid.",
 };
 
 export default function RulesPage() {
@@ -12,7 +12,7 @@ export default function RulesPage() {
         <p className="eyebrow">RULES</p>
         <h1>Rules</h1>
         <p>
-          chain.bid is a public crypto leaderboard. There are no ads, no ranking
+          Chain.bid is a public crypto leaderboard. There are no ads, no ranking
           promises, and no investment recommendations. Projects pay verified
           USDT bids to stand higher on the board. Rank is the credited bid total,
           nothing else.
@@ -57,7 +57,7 @@ export default function RulesPage() {
           <li>Always verify the domain, payment network, receiver address, and exact amount before sending USDT.</li>
           <li>Check that the address shown in your wallet or exchange withdrawal screen matches the checkout page. Do not rely only on a copied clipboard value.</li>
           <li>Beware of fake sites, browser extensions, malware, DNS attacks, and clipboard hijackers that can replace payment addresses.</li>
-          <li>chain.bid does not need token approvals to receive bids. Do not approve unlimited USDT spending for a site claiming to be chain.bid.</li>
+          <li>Chain.bid does not need token approvals to receive bids. Do not approve unlimited USDT spending for a site claiming to be Chain.bid.</li>
           <li>If anything looks different from the checkout screen, stop and do not send funds.</li>
         </ul>
       </section>
@@ -74,7 +74,7 @@ export default function RulesPage() {
       <section>
         <h2>Disclaimer</h2>
         <ul>
-          <li>chain.bid is a visibility leaderboard, not a broker, exchange, investment adviser, escrow service, payment processor, or endorsement platform.</li>
+          <li>Chain.bid is a visibility leaderboard, not a broker, exchange, investment adviser, escrow service, payment processor, or endorsement platform.</li>
           <li>A high rank does not mean a project is safe, legitimate, audited, profitable, or recommended.</li>
           <li>Users are responsible for their own due diligence, wallet security, tax obligations, legal compliance, and transaction decisions.</li>
           <li>Blockchain transactions can be irreversible. Use the site only if you understand the risk of permanent loss.</li>
@@ -83,7 +83,7 @@ export default function RulesPage() {
       </section>
 
       <div className="footer-links rules-footer">
-        <span>chain.bid</span>
+        <span>Chain.bid</span>
         <span>·</span>
         <Link href="/#leaderboard">Live stats</Link>
         <span>·</span>

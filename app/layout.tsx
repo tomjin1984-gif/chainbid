@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "chain.bid - The Crypto Leaderboard",
-    template: "%s - chain.bid",
+    default: "Chain.bid - The Crypto Leaderboard",
+    template: "%s - Chain.bid",
   },
   description:
     "A paid crypto leaderboard where verified USDT bids determine ranking.",
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   openGraph: {
-    title: "chain.bid - The Crypto Leaderboard",
+    title: "Chain.bid - The Crypto Leaderboard",
     description:
       "Crypto projects compete for visibility. Higher verified USDT bids rank higher.",
     type: "website",
@@ -34,13 +34,13 @@ export const metadata: Metadata = {
         url: "/og.png",
         width: 1200,
         height: 630,
-        alt: "chain.bid crypto leaderboard preview",
+        alt: "Chain.bid crypto leaderboard preview",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "chain.bid - The Crypto Leaderboard",
+    title: "Chain.bid - The Crypto Leaderboard",
     description:
       "Crypto projects compete for visibility. Higher verified USDT bids rank higher.",
     images: ["/og.png"],

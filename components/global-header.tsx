@@ -18,9 +18,9 @@ export async function GlobalHeader() {
     <header className="global-header">
       <div className="global-header-inner">
         <nav className="corner-nav" aria-label="Primary">
-          <Link href="/" className="brand-mark" aria-label="chain.bid home">
+          <Link href="/" className="brand-mark" aria-label="Chain.bid home">
             <span className="brand-sigil">cb</span>
-            <span>chain.bid</span>
+            <span>Chain.bid</span>
           </Link>
           <div className="topbar-actions">
             <Link href="/#leaderboard">Leaderboard</Link>

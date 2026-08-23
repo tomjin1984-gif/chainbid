@@ -224,14 +224,14 @@ export async function generateMetadata(): Promise<Metadata> {
   const imageUrl = `${origin}/og.png`;
 
   return {
-    title: "chain.bid - The Crypto Leaderboard",
+    title: "Chain.bid - The Crypto Leaderboard",
     description:
       "Crypto projects compete for visibility. Higher verified USDT bids rank higher.",
     alternates: {
       canonical: origin,
     },
     openGraph: {
-      title: "chain.bid - The Crypto Leaderboard",
+      title: "Chain.bid - The Crypto Leaderboard",
       description:
         "Crypto projects compete for visibility. Higher verified USDT bids rank higher.",
       url: origin,
@@ -239,7 +239,7 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     twitter: {
       card: "summary_large_image",
-      title: "chain.bid - The Crypto Leaderboard",
+      title: "Chain.bid - The Crypto Leaderboard",
       description:
         "Crypto projects compete for visibility. Higher verified USDT bids rank higher.",
       images: [imageUrl],
@@ -367,7 +367,7 @@ export default async function Home({
         </div>
         <p>since its launch {runTime}</p>
         <div className="footer-links">
-          <span>chain.bid</span>
+          <span>Chain.bid</span>
           <span>·</span>
           <Link href="/rules">Rules</Link>
           <span>·</span>

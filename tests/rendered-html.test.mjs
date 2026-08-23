@@ -32,7 +32,7 @@ test("server-renders the crypto leaderboard", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, /chain\.bid/);
+  assert.match(html, /Chain\.bid/);
   assert.match(html, /Claim #1 for/);
   assert.match(html, /Increase claim amount/);
   assert.match(html, /Decrease claim amount/);

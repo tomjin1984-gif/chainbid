@@ -1,4 +1,4 @@
-# chain.bid
+# Chain.bid
 
 Production-oriented Crypto/Web3 USDT bidding leaderboard.
 
