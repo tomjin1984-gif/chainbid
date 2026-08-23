@@ -695,16 +695,15 @@ h2 {
   cursor: pointer;
 }
 
-.rank-card-link {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
+.rank-card-main {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 14px;
+  color: inherit;
+  text-decoration: none;
   border-radius: inherit;
-}
-
-.ranked-card > :not(.rank-card-link) {
-  position: relative;
-  z-index: 2;
 }
 
 .ranked-card::before,
@@ -757,7 +756,7 @@ h2 {
 .rank-action {
   pointer-events: auto;
   position: relative;
-  z-index: 4;
+  z-index: 1;
 }
 
 .rank-column {
@@ -800,12 +799,13 @@ h2 {
   line-height: 1.42;
 }
 
-.rank-project:hover .project-name,
-.rank-project:focus-visible .project-name {
+.rank-card-main:hover .project-name,
+.rank-card-main:focus-visible .project-name {
   color: var(--accent);
 }
 
-.rank-project:focus-visible {
+.rank-card-main:focus-visible {
+  outline: none;
   box-shadow: 0 0 0 3px rgba(0, 224, 164, 0.18);
 }
 
@@ -2302,9 +2302,11 @@ html[data-theme="light"] .address-card {
   }
 
   .ranked-card {
-    display: grid;
-    grid-template-columns: 64px minmax(0, 1fr);
-    align-items: start;
+    align-items: stretch;
+  }
+
+  .rank-card-main {
+    align-items: flex-start;
   }
 
   .rank-column {
@@ -2659,13 +2661,23 @@ html[data-theme="light"] .address-card {
   .ranked-card {
     display: grid;
     grid-template-areas:
-      "rank project bid"
-      "rank meta action";
-    grid-template-columns: 40px minmax(0, 1fr) auto;
+      "main action";
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     min-height: 0;
     gap: 4px 9px;
     padding: 9px 10px;
+  }
+
+  .rank-card-main {
+    display: grid;
+    grid-area: main;
+    grid-template-areas:
+      "rank project bid"
+      "rank meta meta";
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 4px 9px;
   }
 
   .rank-column {

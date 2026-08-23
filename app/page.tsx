@@ -17,6 +17,7 @@ import { ClaimAmountControl } from "@/components/claim-amount-control";
 import {
   categories,
 } from "@/lib/seed";
+import { RankedCardShell } from "@/components/ranked-card-shell";
 import { getPublicAppUrl } from "@/lib/config/env";
 import { claimTopBid } from "@/lib/domain/ranking";
 import { formatUsdt } from "@/lib/domain/money";
@@ -191,58 +192,59 @@ function ProjectRankCard({
     .join(" ");
 
   return (
-    <article className={cardClassName}>
+    <RankedCardShell className={cardClassName} href={project.url} label={`Visit ${project.name}`}>
       <a
-        className="rank-card-link"
+        className="rank-card-main"
+        data-card-main-link=""
         href={project.url}
         aria-label={`Visit ${project.name}`}
         target="_blank"
         rel="noopener noreferrer"
       >
-        <span className="sr-only">Visit {project.name}</span>
-      </a>
-      <div className="rank-column">
-        <span className={project.rank === 1 ? "rank-badge rank-badge-top" : "rank-badge"}>
-          {project.rank === 1 ? <Crown size={16} /> : null}
-          #{project.rank}
-        </span>
-      </div>
-      <div className="rank-project">
-        {project.logoUrl ? (
-          <img
-            className="logo-image"
-            src={project.logoUrl}
-            alt=""
-            width={42}
-            height={42}
-            loading="lazy"
-          />
-        ) : (
-          <div className="logo-token">{project.name.slice(0, 2).toUpperCase()}</div>
-        )}
-        <div>
-          <span className="project-name">{project.name}</span>
-          <span className="domain">{domain}</span>
-          <p>{project.description}</p>
+        <div className="rank-column">
+          <span className={project.rank === 1 ? "rank-badge rank-badge-top" : "rank-badge"}>
+            {project.rank === 1 ? <Crown size={16} /> : null}
+            #{project.rank}
+          </span>
         </div>
-      </div>
-      <div className="rank-meta">
-        <span>{project.category}</span>
-        <small>{project.clickCount.toLocaleString()} clicks</small>
-      </div>
-      <div className="rank-bid">
-        <strong>{formatUsdt(project.totalBidUsdt)}</strong>
-        <small>pass at {formatUsdt(project.nextRankTargetUsdt)}</small>
-      </div>
+        <div className="rank-project">
+          {project.logoUrl ? (
+            <img
+              className="logo-image"
+              src={project.logoUrl}
+              alt=""
+              width={42}
+              height={42}
+              loading="lazy"
+            />
+          ) : (
+            <div className="logo-token">{project.name.slice(0, 2).toUpperCase()}</div>
+          )}
+          <div>
+            <span className="project-name">{project.name}</span>
+            <span className="domain">{domain}</span>
+            <p>{project.description}</p>
+          </div>
+        </div>
+        <div className="rank-meta">
+          <span>{project.category}</span>
+          <small>{project.clickCount.toLocaleString()} clicks</small>
+        </div>
+        <div className="rank-bid">
+          <strong>{formatUsdt(project.totalBidUsdt)}</strong>
+          <small>pass at {formatUsdt(project.nextRankTargetUsdt)}</small>
+        </div>
+      </a>
       <a
         href={`/submit?boost=${project.slug}&target=${project.nextRankTargetUsdt.toString()}`}
         className="button button-small rank-action"
+        data-card-action=""
         aria-label={`Boost ${project.name}`}
       >
         Boost
         <ArrowUpRight size={16} />
       </a>
-    </article>
+    </RankedCardShell>
   );
 }
 
