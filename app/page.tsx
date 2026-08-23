@@ -9,6 +9,7 @@ import {
   ArrowUpRight,
   Crown,
   Flame,
+  RefreshCw,
   Rocket,
   Swords,
 } from "lucide-react";
@@ -31,6 +32,32 @@ const activityIcons = {
   rank_changed: Swords,
   manual_review: Flame,
 };
+const leaderboardPageSize = 20;
+
+function clampPage(page: string | undefined, pageCount: number) {
+  const parsedPage = Number.parseInt(page ?? "1", 10);
+  if (!Number.isFinite(parsedPage)) {
+    return 1;
+  }
+
+  return Math.min(Math.max(parsedPage, 1), pageCount);
+}
+
+function getPaginationItems(currentPage: number, pageCount: number) {
+  if (pageCount <= 5) {
+    return Array.from({ length: pageCount }, (_, index) => index + 1);
+  }
+
+  if (currentPage <= 3) {
+    return [1, 2, 3, 4, "ellipsis", pageCount] as const;
+  }
+
+  if (currentPage >= pageCount - 2) {
+    return [1, "ellipsis", pageCount - 3, pageCount - 2, pageCount - 1, pageCount] as const;
+  }
+
+  return [1, "ellipsis", currentPage - 1, currentPage, currentPage + 1, "ellipsis", pageCount] as const;
+}
 
 function formatRunTime(startedAt: Date, now = new Date()) {
   const elapsedMs = Math.max(0, now.getTime() - startedAt.getTime());
@@ -217,6 +244,91 @@ function ProjectRankCard({
   );
 }
 
+function LeaderboardPagination({
+  activeCategory,
+  currentPage,
+  pageCount,
+  start,
+  end,
+  total,
+}: {
+  activeCategory: string;
+  currentPage: number;
+  pageCount: number;
+  start: number;
+  end: number;
+  total: number;
+}) {
+  function pageHref(page: number) {
+    const params = new URLSearchParams();
+    if (activeCategory !== "All") {
+      params.set("category", activeCategory);
+    }
+    if (page > 1) {
+      params.set("page", page.toString());
+    }
+
+    const query = params.toString();
+    return `${query ? `/?${query}` : "/"}#leaderboard`;
+  }
+
+  const previousPage = Math.max(1, currentPage - 1);
+  const nextPage = Math.min(pageCount, currentPage + 1);
+  const pages = getPaginationItems(currentPage, pageCount);
+
+  return (
+    <nav className="pagination-bar" aria-label="Leaderboard pagination">
+      <div className="pagination-main">
+        <div className="pagination-pages">
+          {currentPage > 1 ? (
+            <Link className="page-control" href={pageHref(previousPage)} aria-label="Previous page">
+              <ArrowLeft size={16} />
+            </Link>
+          ) : (
+            <span className="page-control page-control-disabled" aria-hidden="true">
+              <ArrowLeft size={16} />
+            </span>
+          )}
+
+          {pages.map((page, index) => (
+            page === "ellipsis" ? (
+              <span className="page-ellipsis" key={`ellipsis-${index}`}>
+                ...
+              </span>
+            ) : page === currentPage ? (
+              <span className="page-number page-number-active" key={page} aria-current="page">
+                {page}
+              </span>
+            ) : (
+              <Link className="page-number" href={pageHref(page)} key={page}>
+                {page}
+              </Link>
+            )
+          ))}
+
+          {currentPage < pageCount ? (
+            <Link className="page-control" href={pageHref(nextPage)} aria-label="Next page">
+              <ArrowRight size={16} />
+            </Link>
+          ) : (
+            <span className="page-control page-control-disabled" aria-hidden="true">
+              <ArrowRight size={16} />
+            </span>
+          )}
+        </div>
+        <span className="pagination-range">
+          {start.toLocaleString()} - {end.toLocaleString()} of {total.toLocaleString()}
+        </span>
+      </div>
+
+      <Link className="refresh-button" href={pageHref(currentPage)}>
+        <RefreshCw size={14} />
+        Refresh
+      </Link>
+    </nav>
+  );
+}
+
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();
   const host = requestHeaders.get("host");
@@ -251,7 +363,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string }> | { category?: string };
+  searchParams: Promise<{ category?: string; page?: string }> | { category?: string; page?: string };
 }) {
   const params = await searchParams;
   const activeCategory = params.category ?? "All";
@@ -271,6 +383,12 @@ export default async function Home({
     ...activity.map((event) => ({ createdAt: event.createdAt })),
   ]);
   const runTime = formatRunTime(launchDate);
+  const pageCount = Math.max(1, Math.ceil(projects.length / leaderboardPageSize));
+  const currentPage = clampPage(params.page, pageCount);
+  const pageStartIndex = (currentPage - 1) * leaderboardPageSize;
+  const visibleProjects = projects.slice(pageStartIndex, pageStartIndex + leaderboardPageSize);
+  const rangeStart = projects.length ? pageStartIndex + 1 : 0;
+  const rangeEnd = Math.min(pageStartIndex + visibleProjects.length, projects.length);
 
   return (
     <main className="site-shell home-layout">
@@ -325,7 +443,7 @@ export default async function Home({
         </div>
 
         <div className="ranked-list">
-          {projects.map((project) => (
+          {visibleProjects.map((project) => (
             <Fragment key={project.id}>
               <ProjectRankCard
                 project={project}
@@ -342,19 +460,14 @@ export default async function Home({
           ))}
         </div>
 
-        <div className="pagination-bar">
-          <button type="button" disabled>
-            <ArrowLeft size={16} />
-            Previous
-          </button>
-          <span>
-            Showing 1-{projects.length} of {projects.length}
-          </span>
-          <button type="button" disabled>
-            Next
-            <ArrowRight size={16} />
-          </button>
-        </div>
+        <LeaderboardPagination
+          activeCategory={activeCategory}
+          currentPage={currentPage}
+          pageCount={pageCount}
+          start={rangeStart}
+          end={rangeEnd}
+          total={projects.length}
+        />
       </section>
 
       <section className="site-stats-footer" aria-label="Site statistics">

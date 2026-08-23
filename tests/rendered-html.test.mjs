@@ -42,7 +42,8 @@ test("server-renders the crypto leaderboard", async () => {
   assert.match(html, /This leaderboard has processed/);
   assert.match(html, /since its launch/);
   assert.match(html, /Claim #1/);
-  assert.match(html, /Showing 1-(?:<!-- -->)?20(?:<!-- -->)? of (?:<!-- -->)?20/);
+  assert.match(html, /1(?:<!-- -->)? - (?:<!-- -->)?20(?:<!-- -->)? of (?:<!-- -->)?20/);
+  assert.match(html, /Refresh/);
   assert.match(html, /www\.google\.com\/s2\/favicons/);
   assert.match(html, /href="\/api\/click\/uniswap"/);
   assert.doesNotMatch(html, /href="\/project\//);

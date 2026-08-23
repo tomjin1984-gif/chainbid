@@ -754,22 +754,76 @@ h2 {
 }
 
 .pagination-bar {
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
   color: var(--muted);
   font-size: 13px;
 }
 
-.pagination-bar button {
+.pagination-main {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pagination-pages {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.page-control,
+.page-number,
+.page-ellipsis,
+.refresh-button {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+}
+
+.page-control,
+.page-number {
+  min-width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  color: var(--accent);
+  font-weight: 760;
+}
+
+.page-control {
+  color: #f07a60;
+}
+
+.page-control-disabled {
+  color: rgba(196, 207, 216, 0.34);
+}
+
+.page-number-active {
+  color: #fff9f6;
+  background: #ee7455;
+}
+
+.page-ellipsis,
+.pagination-range {
+  color: #aab3bd;
+}
+
+.refresh-button {
   gap: 7px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 999px;
   background: rgba(255, 255, 255, 0.035);
-  color: var(--muted);
-  padding: 9px 11px;
+  color: #f3f6f8;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 760;
+  white-space: nowrap;
 }
 
 .activity-footer {
@@ -2326,7 +2380,38 @@ textarea:focus {
   }
 
   .pagination-bar {
-    display: grid;
-    justify-items: stretch;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .pagination-main {
+    gap: 6px;
+    justify-items: center;
+  }
+
+  .pagination-pages {
+    justify-content: center;
+    gap: 6px;
+    overflow-x: auto;
+    max-width: 100%;
+  }
+
+  .page-control,
+  .page-number {
+    min-width: 26px;
+    height: 26px;
+    font-size: 12px;
+  }
+
+  .pagination-range {
+    font-size: 12px;
+  }
+
+  .refresh-button {
+    align-self: end;
+    min-height: 28px;
+    padding: 5px 9px;
+    font-size: 11px;
   }
 }
