@@ -13,6 +13,20 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const themeInitScript = `
+(() => {
+  try {
+    const storedTheme = window.localStorage.getItem("chain-bid-theme");
+    const prefersLight = window.matchMedia("(prefers-color-scheme: light)").matches;
+    const theme = storedTheme === "light" || storedTheme === "dark"
+      ? storedTheme
+      : prefersLight ? "light" : "dark";
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+  } catch {}
+})();
+`;
+
 export const metadata: Metadata = {
   title: {
     default: "Chain.bid - The Crypto Leaderboard",
@@ -60,6 +74,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <meta name="color-scheme" content="dark light" />
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

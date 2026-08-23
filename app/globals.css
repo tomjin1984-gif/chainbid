@@ -13,6 +13,19 @@
   --danger: #ff6b6b;
 }
 
+html[data-theme="light"] {
+  --background: #f5f8f7;
+  --foreground: #101820;
+  --muted: #66737f;
+  --line: rgba(12, 24, 32, 0.14);
+  --panel: rgba(12, 24, 32, 0.045);
+  --panel-strong: rgba(12, 24, 32, 0.08);
+  --accent: #00b889;
+  --accent-2: #8bec47;
+  --warning: #d49a16;
+  --danger: #d64d4d;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -38,6 +51,12 @@ body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   font-size: 14px;
   margin: 0;
+}
+
+html[data-theme="light"] body {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(0, 184, 137, 0.16), transparent 30rem),
+    linear-gradient(180deg, #f7fbf8 0%, #edf4f2 48%, #faf8f3 100%);
 }
 
 a {
@@ -155,6 +174,71 @@ textarea {
 
 .topbar-links {
   gap: 16px;
+}
+
+.theme-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+  color: #dbe5ec;
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  border-color: rgba(0, 224, 164, 0.32);
+  color: var(--accent);
+}
+
+html[data-theme="light"] .theme-toggle,
+html[data-theme="light"] .outbid-status-pill,
+html[data-theme="light"] .outbid-submit-row label,
+html[data-theme="light"] .category-dropdown-trigger,
+html[data-theme="light"] .category-bar,
+html[data-theme="light"] .ranked-card,
+html[data-theme="light"] .latest-activity-strip,
+html[data-theme="light"] .activity-pill,
+html[data-theme="light"] .category-card,
+html[data-theme="light"] .leaderboard-table,
+html[data-theme="light"] .leaderboard-row,
+html[data-theme="light"] .site-total-card {
+  background: rgba(255, 255, 255, 0.62);
+}
+
+html[data-theme="light"] .ranked-card-top {
+  background:
+    linear-gradient(90deg, rgba(0, 184, 137, 0.16), rgba(139, 236, 71, 0.08) 54%, rgba(255, 255, 255, 0.72)),
+    rgba(255, 255, 255, 0.68);
+}
+
+html[data-theme="light"] .ranked-card-featured {
+  background:
+    linear-gradient(90deg, rgba(212, 154, 22, 0.18), rgba(0, 184, 137, 0.1) 58%, rgba(255, 255, 255, 0.72)),
+    rgba(255, 255, 255, 0.68);
+}
+
+html[data-theme="light"] .theme-toggle,
+html[data-theme="light"] .outbid-status-pill,
+html[data-theme="light"] .outbid-status-pill a,
+html[data-theme="light"] .leaderboard-toolbar > span,
+html[data-theme="light"] .category-card,
+html[data-theme="light"] .rank-meta span,
+html[data-theme="light"] .activity-pill strong,
+html[data-theme="light"] .rules-page h2,
+html[data-theme="light"] .refresh-button {
+  color: #26323d;
+}
+
+html[data-theme="light"] .outbid-title-block p,
+html[data-theme="light"] .rank-project p,
+html[data-theme="light"] .activity-pill small,
+html[data-theme="light"] .activity-pill div > span,
+html[data-theme="light"] .pagination-range,
+html[data-theme="light"] .page-ellipsis {
+  color: #65727e;
 }
 
 .hero-grid {
@@ -2046,46 +2130,54 @@ textarea:focus {
 
   .corner-nav {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
-    gap: 8px 10px;
+    gap: 8px;
     min-height: 0;
   }
 
   .global-header .brand-mark {
     min-width: 0;
-    font-size: 20px;
+    gap: 7px;
+    font-size: 15px;
     white-space: nowrap;
   }
 
   .global-header .brand-sigil {
-    width: 34px;
-    height: 34px;
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    font-size: 13px;
   }
 
   .topbar-actions {
-    display: contents;
+    min-width: 0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 7px;
   }
 
   .topbar-links {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    width: 100%;
-    justify-content: space-between;
-    gap: 8px;
-    font-size: 12px;
-  }
-
-  .topbar-actions > .button {
-    grid-column: 2;
-    grid-row: 1;
-    min-height: 34px;
-    padding: 0 11px;
-    font-size: 12px;
+    min-width: 0;
+    justify-content: flex-end;
+    gap: 10px;
+    overflow-x: auto;
+    font-size: 11px;
+    scrollbar-width: none;
     white-space: nowrap;
   }
 
-  .topbar-actions > .button svg {
+  .topbar-links::-webkit-scrollbar {
+    display: none;
+  }
+
+  .theme-toggle {
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+  }
+
+  .theme-toggle svg {
     width: 14px;
     height: 14px;
   }

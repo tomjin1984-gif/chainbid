@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { getRepository } from "@/lib/repository";
 
 export async function GlobalHeader() {
@@ -29,10 +29,7 @@ export async function GlobalHeader() {
               <Link href="/rules">Rules</Link>
               <Link href="/admin">Admin</Link>
             </div>
-            <Link href="/submit" className="button button-small">
-              <ArrowUpRight size={16} />
-              Submit Project
-            </Link>
+            <ThemeToggle />
           </div>
         </nav>
 
