@@ -19,6 +19,18 @@ interface BoostProject {
   currentBidUsdt: string;
 }
 
+function formatFieldList(fields: string[]) {
+  if (fields.length <= 1) {
+    return fields[0] ?? "";
+  }
+
+  if (fields.length === 2) {
+    return `${fields[0]} and ${fields[1]}`;
+  }
+
+  return `${fields.slice(0, -1).join(", ")}, and ${fields.at(-1)}`;
+}
+
 export function SubmitForm({
   networks,
   boostProject,
@@ -51,8 +63,39 @@ export function SubmitForm({
   );
 
   async function submit() {
-    setBusy(true);
     setStatus(null);
+
+    if (!boostProject) {
+      const missingFields = [
+        { label: "project URL", value: url },
+        { label: "project name", value: name },
+        { label: "description", value: description },
+      ]
+        .filter((field) => !field.value.trim())
+        .map((field) => field.label);
+
+      if (missingFields.length) {
+        setStatus(`Please enter ${formatFieldList(missingFields)} before continuing.`);
+        return;
+      }
+
+      if (name.trim().length < 2) {
+        setStatus("Project name must be at least 2 characters.");
+        return;
+      }
+
+      if (description.trim().length < 10) {
+        setStatus("Description must be at least 10 characters.");
+        return;
+      }
+    }
+
+    if (!bid.trim()) {
+      setStatus("Please enter a bid amount before continuing.");
+      return;
+    }
+
+    setBusy(true);
 
     try {
       const body = boostProject

@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { z } from "zod";
 import { parseWholeUsdt, createUniqueTransferAmountAtomic, formatAtomicAmount } from "../lib/domain/money";
 import { claimTopBid, sortProjectsForLeaderboard, targetToPassRank } from "../lib/domain/ranking";
 import { normalizeProjectUrl } from "../lib/domain/url";
+import { errorMessage } from "../lib/http";
 import { assertSafeMetadataUrl } from "../lib/security/ssrf";
 import { createPaymentOrderDraft } from "../lib/payment/orders";
 import { processPaymentOrder } from "../lib/payment/worker";
@@ -56,6 +58,30 @@ test("blocks obvious SSRF metadata URLs", () => {
   }
 
   assert.equal(assertSafeMetadataUrl("https://example.com").hostname, "example.com");
+});
+
+test("formats validation errors as readable form messages", () => {
+  const schema = z.object({
+    project: z.object({
+      url: z.string().min(4),
+      name: z.string().min(2),
+      description: z.string().min(10),
+    }),
+  });
+
+  const result = schema.safeParse({
+    project: {
+      url: "",
+      name: "",
+      description: "",
+    },
+  });
+
+  assert.equal(result.success, false);
+  assert.equal(
+    errorMessage(result.error),
+    "Enter a project URL. Enter a project name. Write a short project description of at least 10 characters.",
+  );
 });
 
 test("credits a confirmed payment order only once", async () => {
