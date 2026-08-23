@@ -1,0 +1,80 @@
+import assert from "node:assert/strict";
+import { access } from "node:fs/promises";
+import test from "node:test";
+
+const templateRoot = new URL("../", import.meta.url);
+const previewRoot = new URL("../app/_sites-preview/", import.meta.url);
+
+async function render(path = "/") {
+  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
+  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
+  const { default: worker } = await import(workerUrl.href);
+
+  return worker.fetch(
+    new Request(`http://localhost${path}`, {
+      headers: { accept: "text/html" },
+    }),
+    {
+      ASSETS: {
+        fetch: async () => new Response("Not found", { status: 404 }),
+      },
+    },
+    {
+      waitUntil() {},
+      passThroughOnException() {},
+    },
+  );
+}
+
+test("server-renders the crypto leaderboard", async () => {
+  const response = await render();
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
+
+  const html = await response.text();
+  assert.match(html, /chain\.bid/);
+  assert.match(html, /Claim #1 for/);
+  assert.match(html, /Increase claim amount/);
+  assert.match(html, /Decrease claim amount/);
+  assert.match(html, /New spots start at 5 USDT\./);
+  assert.match(html, /Credited payments only/);
+  assert.match(html, /Latest activity/);
+  assert.match(html, /This leaderboard has processed/);
+  assert.match(html, /since its launch/);
+  assert.match(html, /Claim #1/);
+  assert.match(html, /Showing 1-(?:<!-- -->)?20(?:<!-- -->)? of (?:<!-- -->)?20/);
+  assert.match(html, /www\.google\.com\/s2\/favicons/);
+  assert.match(html, /href="\/api\/click\/uniswap"/);
+  assert.doesNotMatch(html, /href="\/project\//);
+  assert.doesNotMatch(html, /codex-preview/);
+  assert.doesNotMatch(html, /react-loading-skeleton/);
+});
+
+test("does not expose project detail pages", async () => {
+  const response = await render("/project/uniswap");
+  assert.equal(response.status, 404);
+});
+
+test("server-renders the categories page", async () => {
+  const response = await render("/categories");
+  assert.equal(response.status, 200);
+
+  const html = await response.text();
+  assert.match(html, /Categories/);
+  assert.match(html, /Every category has its own ranking/);
+  assert.match(html, /AI x Crypto/);
+  assert.match(html, /Prediction Markets/);
+  assert.match(html, /Live stats/);
+});
+
+test("removes the disposable starter preview files", async () => {
+  await assert.rejects(
+    access(new URL("SkeletonPreview.tsx", previewRoot)),
+  );
+  await assert.rejects(
+    access(new URL("preview.css", previewRoot)),
+  );
+  await assert.rejects(
+    access(new URL("public/_sites-preview", templateRoot)),
+  );
+});
