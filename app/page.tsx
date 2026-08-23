@@ -176,6 +176,8 @@ function ProjectRankCard({
         className="rank-project"
         href={`/api/click/${project.id}`}
         aria-label={`Visit ${project.name}`}
+        target="_blank"
+        rel="noopener noreferrer"
       >
         {project.logoUrl ? (
           <img
@@ -273,7 +275,11 @@ export default async function Home({
     <main className="site-shell home-layout">
       <section className="outbid-hero">
         <header className="outbid-title-block">
-          <ClaimAmountControl initialAmount={topBid.toString()} formId="outbid-submit-form" />
+          <ClaimAmountControl
+            key={`${activeCategory}-${topBid.toString()}`}
+            initialAmount={topBid.toString()}
+            formId="outbid-submit-form"
+          />
           <p>
             <span>New spots start at 5 USDT.</span> Paying less than the #1
             price still puts you on the board wherever that bid can take you.
