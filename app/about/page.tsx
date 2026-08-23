@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-html-link-for-pages -- Public Sites navigation must work without client router hydration. */
 export const metadata = {
   title: "About",
-  description: "The story, purpose, and public payment addresses behind Chain.bid.",
+  description: "The purpose, giving commitment, and public payment addresses behind Chain.bid.",
 };
 
 const publicAddresses = [
@@ -30,36 +30,39 @@ export default function AboutPage() {
         <p className="eyebrow">ABOUT</p>
         <h1>About</h1>
         <p>
-          Chain.bid started from a simple idea: in the AI era, even someone who
-          knows almost nothing about code can finally express an idea and turn it
-          into a real product.
+          Chain.bid was inspired by the philosophy behind Outbid.lol: in the age
+          of artificial intelligence, even people with little or no coding
+          experience can express their creativity and turn ideas into real
+          products.
         </p>
       </section>
 
       <section className="about-story">
-        <h2>我的第一个 AI 区块链项目</h2>
+        <h2>Built with AI. Guided by purpose.</h2>
         <p>
-          我是一个代码一窍不通的新手。过去很多想法只能停留在脑海里，
-          但在如今的 AI 时代，我终于可以把自己的想法表达出来，并尝试把它做成一个真正可以被使用的项目。
+          Chain.bid exists to show that creativity should not be limited by
+          technical background. With AI, an idea can move from imagination to a
+          working product, even for someone who is just beginning.
         </p>
         <p>
-          这是我的第一个 AI 区块链项目。我会把这个项目
-          <strong> 80% 的收入 </strong>
-          用于帮助需要帮助的人和事物。我是一个和平爱好者，希望世界和平，没有灾难。
+          <strong>80% of the project&apos;s revenue</strong> will be dedicated to
+          humanitarian aid and meaningful causes. Our hope is a peaceful world,
+          free from war and disaster.
         </p>
         <p>
-          我会公布所有项目收款地址，邀请大家一起来做一件有意义的事情。请加入我们吧。
+          All payment addresses are publicly available. We invite everyone to
+          join us in doing something meaningful.
         </p>
       </section>
 
       <section className="about-metrics" aria-label="Project principles">
         <div>
           <strong>1st</strong>
-          <span>AI blockchain project</span>
+          <span>AI-built blockchain project</span>
         </div>
         <div>
           <strong>80%</strong>
-          <span>income for help</span>
+          <span>revenue for aid</span>
         </div>
         <div>
           <strong>4</strong>
