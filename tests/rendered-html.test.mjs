@@ -71,6 +71,18 @@ test("server-renders the categories page", async () => {
   assert.match(html, /Live stats/);
 });
 
+test("server-renders the about page", async () => {
+  const response = await render("/about");
+  assert.equal(response.status, 200);
+
+  const html = await response.text();
+  assert.match(html, /About/);
+  assert.match(html, /我的第一个 AI 区块链项目/);
+  assert.match(html, /80% 的收入/);
+  assert.match(html, /TXCeQc8ekY2M1xE6DkH9QaHwq4VLK7Vf79/);
+  assert.match(html, /DF3GhEBESpTcLbXuKWyFxYPL9PD66CzQNGK4smFg7ew3/);
+});
+
 test("server-renders rules with security warnings", async () => {
   const response = await render("/rules");
   assert.equal(response.status, 200);

@@ -34,7 +34,7 @@ export async function GlobalHeader() {
               <Link href="/#leaderboard">Leaderboard</Link>
               <Link href="/categories">Categories</Link>
               <Link href="/rules">Rules</Link>
-              <Link href="/admin">Admin</Link>
+              <Link href="/about">About</Link>
             </div>
             <ThemeToggle />
           </div>
