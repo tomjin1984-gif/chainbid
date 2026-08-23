@@ -67,6 +67,18 @@ test("server-renders the categories page", async () => {
   assert.match(html, /Live stats/);
 });
 
+test("server-renders rules with security warnings", async () => {
+  const response = await render("/rules");
+  assert.equal(response.status, 200);
+
+  const html = await response.text();
+  assert.match(html, /How ranking works/);
+  assert.match(html, /Security risk warning/);
+  assert.match(html, /Do not approve unlimited USDT spending/);
+  assert.match(html, /Disclaimer/);
+  assert.match(html, /not legal, financial, tax, or investment advice/);
+});
+
 test("removes the disposable starter preview files", async () => {
   await assert.rejects(
     access(new URL("SkeletonPreview.tsx", previewRoot)),
