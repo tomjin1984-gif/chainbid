@@ -194,7 +194,7 @@ function ProjectRankCard({
     <article className={cardClassName}>
       <a
         className="rank-card-link"
-        href={`/api/click/${project.id}`}
+        href={project.url}
         aria-label={`Visit ${project.name}`}
         target="_blank"
         rel="noopener noreferrer"

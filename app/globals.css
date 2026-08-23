@@ -698,7 +698,7 @@ h2 {
 .rank-card-link {
   position: absolute;
   inset: 0;
-  z-index: 1;
+  z-index: 3;
   border-radius: inherit;
 }
 
@@ -756,6 +756,8 @@ h2 {
 
 .rank-action {
   pointer-events: auto;
+  position: relative;
+  z-index: 4;
 }
 
 .rank-column {
