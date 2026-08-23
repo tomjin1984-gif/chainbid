@@ -208,6 +208,7 @@ function ProjectRankCard({
       <Link
         href={`/submit?boost=${project.slug}&target=${project.nextRankTargetUsdt.toString()}`}
         className="button button-small rank-action"
+        aria-label={`Boost ${project.name}`}
       >
         Boost
         <ArrowUpRight size={16} />

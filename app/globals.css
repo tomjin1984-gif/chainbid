@@ -109,6 +109,7 @@ textarea {
 
 .topbar,
 .topbar-actions,
+.topbar-links,
 .hero-actions,
 .section-heading,
 .category-row,
@@ -150,6 +151,10 @@ textarea {
   gap: 16px;
   color: var(--muted);
   font-size: 13px;
+}
+
+.topbar-links {
+  gap: 16px;
 }
 
 .hero-grid {
@@ -1770,6 +1775,11 @@ textarea:focus {
     justify-content: flex-end;
   }
 
+  .topbar-links {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
   .categories-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1972,8 +1982,76 @@ textarea:focus {
 }
 
 @media (max-width: 560px) {
+  .global-header {
+    padding: 10px 14px 8px;
+  }
+
+  .global-header-inner {
+    gap: 8px;
+  }
+
   .corner-nav {
     display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px 10px;
+    min-height: 0;
+  }
+
+  .global-header .brand-mark {
+    min-width: 0;
+    font-size: 20px;
+    white-space: nowrap;
+  }
+
+  .global-header .brand-sigil {
+    width: 34px;
+    height: 34px;
+  }
+
+  .topbar-actions {
+    display: contents;
+  }
+
+  .topbar-links {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 12px;
+  }
+
+  .topbar-actions > .button {
+    grid-column: 2;
+    grid-row: 1;
+    min-height: 34px;
+    padding: 0 11px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .topbar-actions > .button svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .outbid-status-pill {
+    justify-content: center;
+    justify-self: stretch;
+    width: 100%;
+    gap: 5px;
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+
+  .home-layout {
+    padding: 8px 12px 14px;
+  }
+
+  .outbid-hero {
+    gap: 8px;
+    padding-bottom: 10px;
   }
 
   .categories-page {
@@ -2025,6 +2103,34 @@ textarea:focus {
     border-radius: 8px;
   }
 
+  .leaderboard-section {
+    padding-top: 2px;
+  }
+
+  .leaderboard-toolbar {
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .leaderboard-toolbar > span {
+    padding: 6px 9px;
+    font-size: 11px;
+  }
+
+  .category-bar {
+    margin-bottom: 8px;
+    padding: 6px;
+  }
+
+  .chip {
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+
+  .ranked-list {
+    gap: 6px;
+  }
+
   .site-stats-footer {
     padding: 54px 0 70px;
   }
@@ -2053,10 +2159,6 @@ textarea:focus {
 
   .topbar {
     display: grid;
-  }
-
-  .topbar-actions {
-    justify-content: flex-start;
   }
 
   .project-cell {
@@ -2089,14 +2191,130 @@ textarea:focus {
   }
 
   .ranked-card {
-    grid-template-columns: 1fr;
+    display: grid;
+    grid-template-areas:
+      "rank project bid"
+      "rank meta action";
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    align-items: center;
+    min-height: 0;
+    gap: 4px 9px;
+    padding: 9px 10px;
   }
 
-  .rank-project,
-  .rank-meta,
-  .rank-bid,
+  .rank-column {
+    grid-area: rank;
+    align-self: start;
+    width: 40px;
+    padding-top: 1px;
+  }
+
+  .rank-badge {
+    width: 36px;
+    height: 26px;
+    border-radius: 999px;
+    font-size: 11px;
+    gap: 3px;
+  }
+
+  .rank-badge svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .rank-project {
+    grid-area: project;
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .rank-project > div {
+    min-width: 0;
+  }
+
+  .rank-project .logo-image,
+  .rank-project .logo-token {
+    width: 34px;
+    height: 34px;
+  }
+
+  .project-name {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    margin-bottom: 0;
+    font-size: 14px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .domain {
+    overflow: hidden;
+    margin: 1px 0 0;
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rank-project p {
+    display: -webkit-box;
+    overflow: hidden;
+    margin-top: 2px;
+    font-size: 11px;
+    line-height: 1.25;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+
+  .rank-meta {
+    grid-area: meta;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .rank-meta span,
+  .rank-meta small {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 11px;
+    text-overflow: ellipsis;
+  }
+
+  .rank-bid {
+    grid-area: bid;
+    align-self: start;
+    min-width: max-content;
+    gap: 0;
+    text-align: right;
+  }
+
+  .rank-bid strong {
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .rank-bid small {
+    display: none;
+  }
+
   .rank-action {
-    grid-column: auto;
+    grid-area: action;
+    justify-self: end;
+    width: 28px;
+    min-height: 26px;
+    border-radius: 999px;
+    padding: 0;
+    font-size: 0;
+    gap: 0;
+  }
+
+  .rank-action svg {
+    width: 14px;
+    height: 14px;
   }
 
   .inline-activity {

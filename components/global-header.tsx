@@ -23,10 +23,12 @@ export async function GlobalHeader() {
             <span>Chain.bid</span>
           </Link>
           <div className="topbar-actions">
-            <Link href="/#leaderboard">Leaderboard</Link>
-            <Link href="/categories">Categories</Link>
-            <Link href="/rules">Rules</Link>
-            <Link href="/admin">Admin</Link>
+            <div className="topbar-links">
+              <Link href="/#leaderboard">Leaderboard</Link>
+              <Link href="/categories">Categories</Link>
+              <Link href="/rules">Rules</Link>
+              <Link href="/admin">Admin</Link>
+            </div>
             <Link href="/submit" className="button button-small">
               <ArrowUpRight size={16} />
               Submit Project
