@@ -193,19 +193,22 @@ function ProjectRankCard({
 
   return (
     <article className={cardClassName}>
+      <a
+        className="rank-card-link"
+        href={`/api/click/${project.id}`}
+        aria-label={`Visit ${project.name}`}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <span className="sr-only">Visit {project.name}</span>
+      </a>
       <div className="rank-column">
         <span className={project.rank === 1 ? "rank-badge rank-badge-top" : "rank-badge"}>
           {project.rank === 1 ? <Crown size={16} /> : null}
           #{project.rank}
         </span>
       </div>
-      <a
-        className="rank-project"
-        href={`/api/click/${project.id}`}
-        aria-label={`Visit ${project.name}`}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
+      <div className="rank-project">
         {project.logoUrl ? (
           <img
             className="logo-image"
@@ -223,7 +226,7 @@ function ProjectRankCard({
           <span className="domain">{domain}</span>
           <p>{project.description}</p>
         </div>
-      </a>
+      </div>
       <div className="rank-meta">
         <span>{project.category}</span>
         <small>{project.clickCount.toLocaleString()} clicks</small>

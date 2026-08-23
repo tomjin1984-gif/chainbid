@@ -64,6 +64,23 @@ a {
   text-decoration: none;
 }
 
+a[href],
+button:not(:disabled),
+[role="button"],
+.button {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+a[href],
+button,
+input,
+select,
+textarea {
+  position: relative;
+  z-index: 1;
+}
+
 button,
 input,
 select,
@@ -598,6 +615,25 @@ h2 {
   background: rgba(255, 255, 255, 0.04);
   padding: 12px 14px;
   overflow: hidden;
+  cursor: pointer;
+}
+
+.rank-card-link {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+}
+
+.ranked-card > :not(.rank-card-link) {
+  position: relative;
+  z-index: 2;
+}
+
+.ranked-card::before,
+.ranked-card::after,
+.ranked-card-top::before {
+  pointer-events: none;
 }
 
 .ranked-card-top {
@@ -632,6 +668,17 @@ h2 {
 
 .ranked-card-featured::before {
   background: var(--warning);
+}
+
+.rank-column,
+.rank-project,
+.rank-meta,
+.rank-bid {
+  pointer-events: none;
+}
+
+.rank-action {
+  pointer-events: auto;
 }
 
 .rank-column {
