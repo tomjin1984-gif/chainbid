@@ -33,6 +33,7 @@ test("server-renders the crypto leaderboard", async () => {
 
   const html = await response.text();
   assert.match(html, /Chain\.bid/);
+  assert.match(html, /\/brand\/chain-bid-logo\.svg/);
   assert.match(html, /Switch to light mode/);
   assert.doesNotMatch(html, /Submit Project/);
   assert.match(html, /Claim #1 for/);

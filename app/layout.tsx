@@ -60,8 +60,9 @@ export const metadata: Metadata = {
     images: ["/og.png"],
   },
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
+    icon: "/brand/chain-bid-logo.svg",
+    shortcut: "/brand/chain-bid-logo.svg",
+    apple: "/brand/chain-bid-logo-200.png",
   },
 };
 

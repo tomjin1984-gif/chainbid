@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element -- Brand logo uses the exported static SVG asset. */
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getRepository } from "@/lib/repository";
@@ -19,7 +20,13 @@ export async function GlobalHeader() {
       <div className="global-header-inner">
         <nav className="corner-nav" aria-label="Primary">
           <Link href="/" className="brand-mark" aria-label="Chain.bid home">
-            <span className="brand-sigil">cb</span>
+            <img
+              className="brand-logo"
+              src="/brand/chain-bid-logo.svg"
+              alt=""
+              width={34}
+              height={34}
+            />
             <span>Chain.bid</span>
           </Link>
           <div className="topbar-actions">

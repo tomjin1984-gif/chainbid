@@ -150,7 +150,6 @@ textarea {
   letter-spacing: 0;
 }
 
-.brand-sigil,
 .logo-token {
   display: grid;
   place-items: center;
@@ -160,7 +159,8 @@ textarea {
   font-family: var(--font-geist-mono), monospace;
 }
 
-.brand-sigil {
+.brand-logo {
+  display: block;
   width: 34px;
   height: 34px;
   border-radius: 8px;
@@ -2143,11 +2143,10 @@ textarea:focus {
     white-space: nowrap;
   }
 
-  .global-header .brand-sigil {
+  .global-header .brand-logo {
     width: 28px;
     height: 28px;
     border-radius: 7px;
-    font-size: 13px;
   }
 
   .topbar-actions {
