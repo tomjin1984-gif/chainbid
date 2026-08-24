@@ -14,6 +14,23 @@ const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
 const localBindingConfig = {
   main: "./worker/index.ts",
   compatibility_flags: ["nodejs_compat"],
+  vars: {
+    APP_ENV: "production",
+    NEXT_PUBLIC_APP_URL: "https://chainbid.tomjin1984.workers.dev",
+    SUPABASE_URL: "https://hbdofcqwutrvsszrwrfh.supabase.co",
+    PAYMENTS_TRON_ENABLED: "false",
+    PAYMENTS_ETHEREUM_ENABLED: "false",
+    PAYMENTS_BSC_ENABLED: "true",
+    PAYMENTS_SOLANA_ENABLED: "false",
+    BSC_RPC_URL: "https://bsc-dataseed.bnbchain.org",
+    BSC_USDT_SOURCE_APPROVED: "true",
+    USDT_RECEIVER_BSC: "0x64182691a520444f9caaf9dcf5bf50e002b42413",
+    USDT_CONTRACT_BSC: "0x55d398326f99059fF775485246999027B3197955",
+    USDT_DECIMALS_BSC: "18",
+    BSC_CONFIRMATIONS: "45",
+    PAYMENT_ORDER_EXPIRY_MINUTES: "30",
+    PAYMENT_WORKER_BATCH_SIZE: "50",
+  },
   d1_databases: d1
     ? [
         {
