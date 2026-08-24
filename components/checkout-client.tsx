@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, ExternalLink, RefreshCw, ShieldAlert } from "lucide-react";
+import { Copy, RefreshCw, ShieldAlert } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 interface PublicOrder {
@@ -19,7 +19,6 @@ export function CheckoutClient({
   projectName,
   networkLabel,
   tokenStandard,
-  paymentPayload,
   qrDataUrl,
   warning,
 }: {
@@ -27,7 +26,6 @@ export function CheckoutClient({
   projectName: string;
   networkLabel: string;
   tokenStandard: string;
-  paymentPayload: string;
   qrDataUrl: string;
   warning: string;
 }) {
@@ -137,10 +135,6 @@ export function CheckoutClient({
               <Copy size={16} />
               Amount
             </button>
-            <a className="button button-secondary button-small" href={paymentPayload}>
-              <ExternalLink size={16} />
-              Wallet
-            </a>
           </div>
         </div>
 

@@ -84,6 +84,36 @@ test("server-renders submit page without removed optional fields", async () => {
   assert.doesNotMatch(html, /Optional Paying Wallet/);
 });
 
+test("server-renders checkout without wallet shortcut", async () => {
+  const devPayload = Buffer.from(JSON.stringify({
+    order: {
+      publicId: "test-order",
+      status: "pending",
+      receiverAddress: "TXCeQc8ekY2M1xE6DkH9QaHwq4VLK7Vf79",
+      expectedTransferAmountDisplay: "5.141038 USDT",
+      bidCreditUsdt: "5",
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      txHash: null,
+      confirmations: 0,
+    },
+    project: { name: "Test Project" },
+    paymentPayload: "TXCeQc8ekY2M1xE6DkH9QaHwq4VLK7Vf79",
+    network: {
+      label: "TRON",
+      tokenStandard: "USDT TRC20",
+      warning: "Send USDT only on TRON.",
+    },
+  }), "utf8").toString("base64url");
+
+  const response = await render(`/checkout/test-order?dev=${devPayload}`);
+  assert.equal(response.status, 200);
+
+  const html = await response.text();
+  assert.match(html, /Address/);
+  assert.match(html, /Amount/);
+  assert.doesNotMatch(html, /Wallet/);
+});
+
 test("server-renders the about page", async () => {
   const response = await render("/about");
   assert.equal(response.status, 200);

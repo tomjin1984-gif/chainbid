@@ -39,7 +39,6 @@ export default async function CheckoutPage({
             projectName={developmentCheckout.project?.name ?? "Project"}
             networkLabel={developmentCheckout.network.label}
             tokenStandard={developmentCheckout.network.tokenStandard}
-            paymentPayload={developmentCheckout.paymentPayload}
             qrDataUrl={qrDataUrl}
             warning={developmentCheckout.network.warning}
           />
@@ -72,7 +71,6 @@ export default async function CheckoutPage({
         projectName={project?.name ?? "Project"}
         networkLabel={network.label}
         tokenStandard={network.tokenStandard}
-        paymentPayload={paymentPayload}
         qrDataUrl={qrDataUrl}
         warning={warningForNetwork(network.label)}
       />
