@@ -1,27 +1,43 @@
-import { isProduction, readEnv } from "@/lib/config/env";
+import { getAppEnv, isProduction, readEnv } from "@/lib/config/env";
 import { devRepository } from "./dev-store";
 import { SupabaseRestRepository } from "./supabase-rest";
 import type { Repository } from "./types";
 
-let cached: Repository | null = null;
+let cached: { key: string; repository: Repository } | null = null;
+
+export function getRepositoryDiagnostics() {
+  const supabaseUrlConfigured = Boolean(readEnv("SUPABASE_URL"));
+  const serviceRoleKeyConfigured = Boolean(readEnv("SUPABASE_SERVICE_ROLE_KEY"));
+
+  return {
+    appEnv: getAppEnv(),
+    source:
+      supabaseUrlConfigured && serviceRoleKeyConfigured
+        ? "supabase"
+        : "development",
+    supabaseUrlConfigured,
+    serviceRoleKeyConfigured,
+  };
+}
 
 export function getRepository(): Repository {
-  if (cached) {
-    return cached;
+  const diagnostics = getRepositoryDiagnostics();
+  const cacheKey = `${diagnostics.source}:${diagnostics.appEnv}`;
+
+  if (cached?.key === cacheKey) {
+    return cached.repository;
   }
 
-  const hasSupabase =
-    Boolean(readEnv("SUPABASE_URL")) && Boolean(readEnv("SUPABASE_SERVICE_ROLE_KEY"));
-
-  if (hasSupabase) {
-    cached = new SupabaseRestRepository();
-    return cached;
+  if (diagnostics.source === "supabase") {
+    const repository = new SupabaseRestRepository();
+    cached = { key: cacheKey, repository };
+    return repository;
   }
 
   if (isProduction()) {
     throw new Error("Production requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.");
   }
 
-  cached = devRepository;
-  return cached;
+  cached = { key: cacheKey, repository: devRepository };
+  return devRepository;
 }

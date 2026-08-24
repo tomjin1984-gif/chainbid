@@ -13,11 +13,20 @@ interface Env {
       };
     };
   };
+  [key: string]: unknown;
 }
 
 interface ExecutionContext {
   waitUntil(promise: Promise<unknown>): void;
   passThroughOnException(): void;
+}
+
+function syncRuntimeEnv(env: Env) {
+  for (const [key, value] of Object.entries(env)) {
+    if (typeof value === "string") {
+      process.env[key] = value;
+    }
+  }
 }
 
 // Image security config. SVG sources with .svg extension auto-skip the
@@ -28,6 +37,8 @@ interface ExecutionContext {
 
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    syncRuntimeEnv(env);
+
     const url = new URL(request.url);
 
     if (url.pathname === "/_vinext/image") {

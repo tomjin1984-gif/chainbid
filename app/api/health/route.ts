@@ -1,10 +1,15 @@
 import { getNetworkConfigs } from "@/lib/config/networks";
-import { getRepository } from "@/lib/repository";
+import { getRepository, getRepositoryDiagnostics } from "@/lib/repository";
 
 export async function GET() {
   let database = "ok";
+  let leaderboardCount = 0;
+  let topProjectName: string | null = null;
+
   try {
-    await getRepository().getLeaderboard();
+    const leaderboard = await getRepository().getLeaderboard();
+    leaderboardCount = leaderboard.length;
+    topProjectName = leaderboard[0]?.name ?? null;
   } catch (error) {
     database = error instanceof Error ? error.message : "error";
   }
@@ -12,6 +17,9 @@ export async function GET() {
   return Response.json({
     status: database === "ok" ? "ok" : "degraded",
     database,
+    repository: getRepositoryDiagnostics(),
+    leaderboardCount,
+    topProjectName,
     networks: getNetworkConfigs().map((network) => ({
       network: network.network,
       label: network.label,
