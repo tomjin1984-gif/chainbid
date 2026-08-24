@@ -52,8 +52,6 @@ export function SubmitForm({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState(defaultCategory ?? "DeFi");
-  const [xUrl, setXUrl] = useState("");
-  const [sender, setSender] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -99,24 +97,21 @@ export function SubmitForm({
 
     try {
       const body = boostProject
-        ? {
-            projectId: boostProject.id,
-            network,
-            bidTotalUsdt: bid,
-            expectedSenderAddress: sender || null,
-          }
-        : {
-            project: {
-              url,
-              name,
-              description,
-              category,
-              xUrl: xUrl || null,
-            },
-            network,
-            bidTotalUsdt: bid,
-            expectedSenderAddress: sender || null,
-          };
+          ? {
+              projectId: boostProject.id,
+              network,
+              bidTotalUsdt: bid,
+            }
+          : {
+              project: {
+                url,
+                name,
+                description,
+                category,
+              },
+              network,
+              bidTotalUsdt: bid,
+            };
 
       const response = await fetch("/api/payment-orders", {
         method: "POST",
@@ -196,10 +191,6 @@ export function SubmitForm({
                   ))}
               </select>
             </label>
-            <label>
-              X Account
-              <input value={xUrl} onChange={(event) => setXUrl(event.target.value)} placeholder="https://x.com/example" />
-            </label>
           </div>
         )}
 
@@ -207,10 +198,6 @@ export function SubmitForm({
           <label>
             {boostProject ? "Target Total Bid" : "Initial Bid"}
             <input value={bid} onChange={(event) => setBid(event.target.value)} inputMode="numeric" />
-          </label>
-          <label>
-            Optional Paying Wallet
-            <input value={sender} onChange={(event) => setSender(event.target.value)} placeholder="Leave blank for exchange withdrawals" />
           </label>
         </div>
 

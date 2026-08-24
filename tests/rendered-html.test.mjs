@@ -72,6 +72,17 @@ test("server-renders the categories page", async () => {
   assert.match(html, /Live stats/);
 });
 
+test("server-renders submit page without removed optional fields", async () => {
+  const response = await render("/submit");
+  assert.equal(response.status, 200);
+
+  const html = await response.text();
+  assert.match(html, /Project URL/);
+  assert.match(html, /Initial Bid/);
+  assert.doesNotMatch(html, /X Account/);
+  assert.doesNotMatch(html, /Optional Paying Wallet/);
+});
+
 test("server-renders the about page", async () => {
   const response = await render("/about");
   assert.equal(response.status, 200);
