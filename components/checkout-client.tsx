@@ -14,6 +14,12 @@ interface PublicOrder {
   confirmations: number;
 }
 
+interface PublicVerification {
+  status: string;
+  confirmations: number;
+  failureReason: string | null;
+}
+
 export function CheckoutClient({
   initialOrder,
   projectName,
@@ -80,13 +86,36 @@ export function CheckoutClient({
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ txHash }),
     });
-    const payload = (await response.json()) as { error?: string; order?: PublicOrder };
+    const text = await response.text();
+    let payload: {
+      error?: string;
+      order?: PublicOrder | null;
+      verification?: PublicVerification | null;
+      credited?: boolean;
+    };
+    try {
+      payload = text ? JSON.parse(text) : { error: "Verification returned an empty response." };
+    } catch {
+      payload = { error: text || "Verification returned an unreadable response." };
+    }
     if (!response.ok) {
       setMessage(payload.error ?? "Verification request failed.");
       return;
     }
     if (payload.order) {
       setOrder(payload.order);
+    }
+    if (payload.credited || payload.order?.status === "credited") {
+      setMessage("Payment credited. The project is now on the leaderboard.");
+      return;
+    }
+    if (payload.verification?.status === "unconfirmed") {
+      setMessage(`Payment detected. Waiting for confirmations (${payload.verification.confirmations}).`);
+      return;
+    }
+    if (payload.verification?.failureReason) {
+      setMessage(payload.verification.failureReason);
+      return;
     }
     setMessage("Verification check requested.");
   }

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getRepository } from "@/lib/repository";
 import { processPaymentOrder } from "@/lib/payment/worker";
+import type { VerificationResult } from "@/lib/payment/types";
 import { publicPaymentOrder } from "@/lib/repository/serializers";
 import { errorMessage, jsonError, readJson } from "@/lib/http";
 import { checkRateLimit, rateLimitKey } from "@/lib/security/rate-limit";
@@ -8,6 +9,17 @@ import { checkRateLimit, rateLimitKey } from "@/lib/security/rate-limit";
 const txSchema = z.object({
   txHash: z.string().min(12).max(160),
 });
+
+function publicVerification(result: VerificationResult | null) {
+  if (!result) {
+    return null;
+  }
+
+  return {
+    ...result,
+    amountAtomic: result.amountAtomic?.toString() ?? null,
+  };
+}
 
 export async function POST(
   request: Request,
@@ -41,7 +53,7 @@ export async function POST(
 
     return Response.json({
       order: updated ? publicPaymentOrder(updated) : null,
-      verification: result.result ?? null,
+      verification: publicVerification(result.result ?? null),
       credited: result.credited,
     });
   } catch (error) {
