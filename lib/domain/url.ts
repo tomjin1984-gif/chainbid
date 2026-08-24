@@ -16,7 +16,20 @@ const TRACKING_PARAMS = new Set([
 export interface NormalizedProjectUrl {
   url: string;
   canonicalListingKey: string;
+  canonicalListingKeyAlternates: string[];
   hostname: string;
+}
+
+function listingHostname(hostname: string) {
+  return hostname.toLowerCase().replace(/^www\./, "");
+}
+
+function canonicalListingKey(url: URL, hostname: string) {
+  return [
+    hostname,
+    url.pathname === "/" ? "" : url.pathname,
+    url.search ? url.search : "",
+  ].join("").toLowerCase();
 }
 
 export function normalizeProjectUrl(input: string): NormalizedProjectUrl {
@@ -43,16 +56,22 @@ export function normalizeProjectUrl(input: string): NormalizedProjectUrl {
     url.pathname = url.pathname.replace(/\/+$/, "");
   }
 
-  const canonicalListingKey = [
-    url.hostname,
-    url.pathname === "/" ? "" : url.pathname,
-    url.search ? url.search : "",
-  ].join("").toLowerCase();
+  const hostname = listingHostname(url.hostname);
+  const primaryKey = canonicalListingKey(url, hostname);
+  const alternateHostnames = new Set<string>();
+  if (url.hostname !== hostname) {
+    alternateHostnames.add(url.hostname);
+  } else {
+    alternateHostnames.add(`www.${hostname}`);
+  }
 
   return {
     url: url.toString(),
-    canonicalListingKey,
-    hostname: url.hostname,
+    canonicalListingKey: primaryKey,
+    canonicalListingKeyAlternates: [...alternateHostnames]
+      .map((hostnameCandidate) => canonicalListingKey(url, hostnameCandidate))
+      .filter((key) => key !== primaryKey),
+    hostname,
   };
 }
 

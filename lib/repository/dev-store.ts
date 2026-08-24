@@ -1,5 +1,5 @@
 import { decorateLeaderboard, rankForTotalBid } from "@/lib/domain/ranking";
-import { normalizeProjectUrl, slugifyProjectName } from "@/lib/domain/url";
+import { normalizeProjectUrl } from "@/lib/domain/url";
 import type {
   ActivityEventRecord,
   BidRecord,
@@ -108,7 +108,7 @@ class DevRepository implements Repository {
   async createProject(input: CreateProjectInput) {
     const project: ProjectRecord = {
       id: id("proj"),
-      slug: slugifyProjectName(input.name, input.canonicalListingKey),
+      slug: input.slug,
       canonicalListingKey: input.canonicalListingKey,
       name: input.name,
       url: input.url,

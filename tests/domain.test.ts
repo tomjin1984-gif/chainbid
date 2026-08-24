@@ -52,6 +52,15 @@ test("normalizes listing URLs and preserves meaningful paths", () => {
   assert.equal(first.url, "https://github.com/user/project-a");
 });
 
+test("treats www and non-www homepages as the same listing", () => {
+  const withWww = normalizeProjectUrl("https://www.uniswap.org/");
+  const withoutWww = normalizeProjectUrl("https://uniswap.org/");
+
+  assert.equal(withWww.canonicalListingKey, "uniswap.org");
+  assert.equal(withoutWww.canonicalListingKey, "uniswap.org");
+  assert.equal(withoutWww.canonicalListingKeyAlternates.includes("www.uniswap.org"), true);
+});
+
 test("blocks obvious SSRF metadata URLs", () => {
   for (const url of ["http://localhost", "http://127.0.0.1", "http://169.254.169.254", "file:///tmp/x"]) {
     assert.throws(() => assertSafeMetadataUrl(url));

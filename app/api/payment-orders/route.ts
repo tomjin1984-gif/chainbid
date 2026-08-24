@@ -12,8 +12,11 @@ import { resolveProjectLogoUrl } from "@/lib/project-icons";
 import { resolveProjectMetadata } from "@/lib/project-metadata";
 import { getRepository } from "@/lib/repository";
 import { publicPaymentOrder, publicProject } from "@/lib/repository/serializers";
+import type { Repository } from "@/lib/repository/types";
+import type { ProjectRecord } from "@/lib/domain/types";
 import { errorMessage, jsonError, readJson } from "@/lib/http";
 import { checkRateLimit, rateLimitKey } from "@/lib/security/rate-limit";
+import type { NormalizedProjectUrl } from "@/lib/domain/url";
 
 const orderSchema = z.object({
   projectId: z.string().optional(),
@@ -31,6 +34,59 @@ const orderSchema = z.object({
   bidTotalUsdt: z.union([z.string(), z.number(), z.bigint()]),
   expectedSenderAddress: z.string().max(160).optional().nullable(),
 });
+
+function projectMatchesListing(project: ProjectRecord, normalized: NormalizedProjectUrl) {
+  const acceptedKeys = new Set([
+    normalized.canonicalListingKey,
+    ...normalized.canonicalListingKeyAlternates,
+  ]);
+
+  if (acceptedKeys.has(project.canonicalListingKey)) {
+    return true;
+  }
+
+  try {
+    const existing = normalizeProjectUrl(project.url);
+    return acceptedKeys.has(existing.canonicalListingKey);
+  } catch {
+    return false;
+  }
+}
+
+async function findExistingProject(
+  repository: Repository,
+  normalized: NormalizedProjectUrl,
+  slug?: string,
+) {
+  for (const key of [
+    normalized.canonicalListingKey,
+    ...normalized.canonicalListingKeyAlternates,
+  ]) {
+    const duplicate = await repository.findProjectByCanonicalKey(key);
+    if (duplicate) {
+      return duplicate;
+    }
+  }
+
+  if (slug) {
+    const bySlug = await repository.getProjectBySlug(slug);
+    if (bySlug && projectMatchesListing(bySlug, normalized)) {
+      return bySlug;
+    }
+  }
+
+  return null;
+}
+
+function uniqueSlug(baseSlug: string, canonicalKey: string) {
+  let hash = 0;
+  for (const char of canonicalKey) {
+    hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  }
+
+  const suffix = hash.toString(36).slice(0, 6);
+  return `${baseSlug.slice(0, Math.max(1, 65 - suffix.length))}-${suffix}`;
+}
 
 export async function POST(request: Request) {
   const limited = checkRateLimit({
@@ -53,9 +109,7 @@ export async function POST(request: Request) {
     if (!project && payload.project) {
       const normalized = normalizeProjectUrl(payload.project.url);
       assertSafeMetadataUrl(normalized.url);
-      const duplicate = await repository.findProjectByCanonicalKey(
-        normalized.canonicalListingKey,
-      );
+      const duplicate = await findExistingProject(repository, normalized);
 
       if (duplicate) {
         project = duplicate;
@@ -75,16 +129,41 @@ export async function POST(request: Request) {
           return jsonError("Project description could not be detected from this URL.", 400);
         }
 
-        project = await repository.createProject({
-          canonicalListingKey: normalized.canonicalListingKey,
-          slug: slugifyProjectName(name, normalized.hostname),
-          name,
-          url: normalized.url,
-          description,
-          category: payload.project.category,
-          xUrl: payload.project.xUrl?.trim() || null,
-          logoUrl,
-        });
+        const baseSlug = slugifyProjectName(name, normalized.hostname);
+        const existingBySlug = await findExistingProject(repository, normalized, baseSlug);
+        if (existingBySlug) {
+          project = existingBySlug;
+        } else {
+          const slug =
+            (await repository.getProjectBySlug(baseSlug))
+              ? uniqueSlug(baseSlug, normalized.canonicalListingKey)
+              : baseSlug;
+
+          try {
+            project = await repository.createProject({
+              canonicalListingKey: normalized.canonicalListingKey,
+              slug,
+              name,
+              url: normalized.url,
+              description,
+              category: payload.project.category,
+              xUrl: payload.project.xUrl?.trim() || null,
+              logoUrl,
+            });
+          } catch (error) {
+            const fallback = await findExistingProject(repository, normalized, baseSlug);
+            if (fallback) {
+              project = fallback;
+            } else if (errorMessage(error).includes("duplicate key")) {
+              return jsonError(
+                "This project already has a pending or active listing. Open it from the leaderboard or try again in a moment.",
+                409,
+              );
+            } else {
+              throw error;
+            }
+          }
+        }
       }
     }
 
