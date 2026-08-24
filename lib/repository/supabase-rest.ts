@@ -143,6 +143,29 @@ export class SupabaseRestRepository implements Repository {
     return rows[0] ? paymentOrderFromRow(rows[0]) : null;
   }
 
+  async updateWaitingPaymentOrderNetwork(publicId: string, draft: PaymentOrderDraft) {
+    const rows = await supabaseFetch<Row[]>(
+      `/rest/v1/payment_orders?public_id=eq.${encodeURIComponent(publicId)}&status=eq.waiting&tx_hash=is.null`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          network: draft.network,
+          receiver_address: draft.receiverAddress,
+          token_contract_or_mint: draft.tokenContractOrMint,
+          expected_transfer_amount_atomic: draft.expectedTransferAmountAtomic.toString(),
+          expected_transfer_amount_display: draft.expectedTransferAmountDisplay,
+          expected_sender_address: draft.expectedSenderAddress,
+          expires_at: draft.expiresAt,
+          confirmations: 0,
+          block_number_or_slot: null,
+          failure_reason: null,
+        }),
+      },
+    );
+
+    return rows[0] ? paymentOrderFromRow(rows[0]) : null;
+  }
+
   async listOpenPaymentOrders(args: { statuses: PaymentOrderStatus[]; limit: number }) {
     const rows = await supabaseFetch<Row[]>(
       `/rest/v1/payment_orders?select=*&status=in.(${args.statuses.join(",")})&order=created_at.asc&limit=${args.limit}`,

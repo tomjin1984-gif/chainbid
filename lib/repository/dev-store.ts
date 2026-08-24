@@ -169,6 +169,29 @@ class DevRepository implements Repository {
     return this.payments.get(publicId) ?? null;
   }
 
+  async updateWaitingPaymentOrderNetwork(publicId: string, draft: PaymentOrderDraft) {
+    const order = this.payments.get(publicId);
+    if (!order || order.status !== "waiting" || order.txHash) {
+      return null;
+    }
+
+    const updated: PaymentOrderRecord = {
+      ...order,
+      network: draft.network,
+      receiverAddress: draft.receiverAddress,
+      tokenContractOrMint: draft.tokenContractOrMint,
+      expectedTransferAmountAtomic: draft.expectedTransferAmountAtomic,
+      expectedTransferAmountDisplay: draft.expectedTransferAmountDisplay,
+      expectedSenderAddress: draft.expectedSenderAddress,
+      expiresAt: draft.expiresAt,
+      confirmations: 0,
+      blockNumberOrSlot: null,
+      failureReason: null,
+    };
+    this.payments.set(publicId, updated);
+    return updated;
+  }
+
   async listOpenPaymentOrders(args: { statuses: PaymentOrderStatus[]; limit: number }) {
     return [...this.payments.values()]
       .filter((payment) => args.statuses.includes(payment.status))

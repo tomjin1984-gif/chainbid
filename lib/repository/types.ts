@@ -30,6 +30,10 @@ export interface Repository {
   listBidsForProject(projectId: string): Promise<BidRecord[]>;
   createPaymentOrder(draft: PaymentOrderDraft): Promise<PaymentOrderRecord>;
   getPaymentOrder(publicId: string): Promise<PaymentOrderRecord | null>;
+  updateWaitingPaymentOrderNetwork(
+    publicId: string,
+    draft: PaymentOrderDraft,
+  ): Promise<PaymentOrderRecord | null>;
   listOpenPaymentOrders(args: {
     statuses: PaymentOrderStatus[];
     limit: number;

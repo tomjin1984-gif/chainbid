@@ -2,7 +2,11 @@ import { notFound } from "next/navigation";
 import { CheckoutClient } from "@/components/checkout-client";
 import { isProduction } from "@/lib/config/env";
 import { decodeDevelopmentCheckout } from "@/lib/dev-checkout-token";
-import { getNetworkConfig } from "@/lib/config/networks";
+import {
+  getNetworkConfig,
+  getNetworkConfigs,
+  isNetworkAvailableForCheckout,
+} from "@/lib/config/networks";
 import { createQrDataUrl } from "@/lib/payment/qr";
 import { buildPaymentPayload, warningForNetwork } from "@/lib/payment/uris";
 import { getRepository } from "@/lib/repository";
@@ -26,6 +30,12 @@ export default async function CheckoutPage({
   const { publicId } = await params;
   const query = await searchParams;
   const repository = getRepository();
+  const networks = getNetworkConfigs().map((network) => ({
+    network: network.network,
+    label: network.label,
+    tokenStandard: network.tokenStandard,
+    enabled: isNetworkAvailableForCheckout(network),
+  }));
   const order = await repository.getPaymentOrder(publicId);
   if (!order) {
     if (isProduction()) {
@@ -35,15 +45,20 @@ export default async function CheckoutPage({
     const developmentCheckout = decodeDevelopmentCheckout(query.dev);
     if (developmentCheckout) {
       const qrDataUrl = await createQrDataUrl(developmentCheckout.paymentPayload);
+      const network = getNetworkConfig(developmentCheckout.order.network ?? "tron");
       return (
         <main className="site-shell subpage-shell">
           <CheckoutClient
-            initialOrder={developmentCheckout.order}
+            initialOrder={{ ...developmentCheckout.order, network: network.network }}
             projectName={developmentCheckout.project?.name ?? "Project"}
-            networkLabel={developmentCheckout.network.label}
-            tokenStandard={developmentCheckout.network.tokenStandard}
-            qrDataUrl={qrDataUrl}
-            warning={developmentCheckout.network.warning}
+            initialNetwork={{
+              network: network.network,
+              label: developmentCheckout.network.label,
+              tokenStandard: developmentCheckout.network.tokenStandard,
+              warning: developmentCheckout.network.warning,
+            }}
+            initialQrDataUrl={qrDataUrl}
+            networks={networks}
           />
         </main>
       );
@@ -72,10 +87,14 @@ export default async function CheckoutPage({
       <CheckoutClient
         initialOrder={publicPaymentOrder(order)}
         projectName={project?.name ?? "Project"}
-        networkLabel={network.label}
-        tokenStandard={network.tokenStandard}
-        qrDataUrl={qrDataUrl}
-        warning={warningForNetwork(network.label)}
+        initialNetwork={{
+          network: network.network,
+          label: network.label,
+          tokenStandard: network.tokenStandard,
+          warning: warningForNetwork(network.label),
+        }}
+        initialQrDataUrl={qrDataUrl}
+        networks={networks}
       />
     </main>
   );

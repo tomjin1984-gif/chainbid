@@ -24,14 +24,28 @@ export function createPaymentOrderDraft(args: {
   expectedSenderAddress?: string | null;
   now?: Date;
 }): PaymentOrderDraft {
+  const publicId = createPublicId();
+  return createPaymentOrderDraftForPublicId({
+    ...args,
+    publicId,
+  });
+}
+
+export function createPaymentOrderDraftForPublicId(args: {
+  publicId: string;
+  projectId: string;
+  network: SupportedNetwork;
+  bidCreditUsdt: bigint;
+  expectedSenderAddress?: string | null;
+  now?: Date;
+}): PaymentOrderDraft {
   const config = getNetworkConfig(args.network);
   assertNetworkReadyForCheckout(config);
 
-  const publicId = createPublicId();
   const expectedTransferAmountAtomic = createUniqueTransferAmountAtomic({
     bidCreditUsdt: args.bidCreditUsdt,
     tokenDecimals: config.decimals,
-    orderPublicId: publicId,
+    orderPublicId: args.publicId,
   });
 
   const now = args.now ?? new Date();
@@ -40,7 +54,7 @@ export function createPaymentOrderDraft(args: {
   ).toISOString();
 
   return {
-    publicId,
+    publicId: args.publicId,
     projectId: args.projectId,
     network: args.network,
     receiverAddress: config.receiverAddress,

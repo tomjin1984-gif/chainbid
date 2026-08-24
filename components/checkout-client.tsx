@@ -2,9 +2,11 @@
 
 import { Copy, RefreshCw, ShieldAlert } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import type { SupportedNetwork } from "@/lib/domain/types";
 
 interface PublicOrder {
   publicId: string;
+  network: SupportedNetwork;
   status: string;
   receiverAddress: string;
   expectedTransferAmountDisplay: string;
@@ -20,24 +22,61 @@ interface PublicVerification {
   failureReason: string | null;
 }
 
+interface NetworkOption {
+  network: SupportedNetwork;
+  label: string;
+  tokenStandard: string;
+  enabled: boolean;
+}
+
+interface NetworkDetails {
+  network: SupportedNetwork;
+  label: string;
+  tokenStandard: string;
+  warning: string;
+}
+
+interface PaymentOrderPayload {
+  error?: string;
+  order?: PublicOrder | null;
+  network?: NetworkDetails | null;
+  qrDataUrl?: string | null;
+}
+
+const shortNetworkLabels: Record<SupportedNetwork, string> = {
+  tron: "TRON",
+  ethereum: "ETH",
+  bsc: "BNB",
+  solana: "SOL",
+};
+
+function parsePayload(text: string, fallback: string): PaymentOrderPayload {
+  try {
+    return text ? JSON.parse(text) : { error: fallback };
+  } catch {
+    return { error: text || "The server returned an unreadable response." };
+  }
+}
+
 export function CheckoutClient({
   initialOrder,
   projectName,
-  networkLabel,
-  tokenStandard,
-  qrDataUrl,
-  warning,
+  initialNetwork,
+  initialQrDataUrl,
+  networks,
 }: {
   initialOrder: PublicOrder;
   projectName: string;
-  networkLabel: string;
-  tokenStandard: string;
-  qrDataUrl: string;
-  warning: string;
+  initialNetwork: NetworkDetails;
+  initialQrDataUrl: string;
+  networks: NetworkOption[];
 }) {
   const [order, setOrder] = useState(initialOrder);
+  const [network, setNetwork] = useState(initialNetwork);
+  const [qrDataUrl, setQrDataUrl] = useState(initialQrDataUrl);
   const [txHash, setTxHash] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const [switchingNetwork, setSwitchingNetwork] = useState<SupportedNetwork | null>(null);
 
   const statusLabel = useMemo(() => {
     if (order.status === "credited") {
@@ -47,7 +86,7 @@ export function CheckoutClient({
       return "Payment confirmed";
     }
     if (order.status === "confirming") {
-      return `Confirming on ${networkLabel}`;
+      return `Confirming on ${network.label}`;
     }
     if (order.status === "detected") {
       return "Payment detected";
@@ -59,7 +98,7 @@ export function CheckoutClient({
       return "Payment window expired";
     }
     return "Waiting for payment";
-  }, [networkLabel, order.status]);
+  }, [network.label, order.status]);
 
   useEffect(() => {
     const interval = window.setInterval(async () => {
@@ -67,8 +106,16 @@ export function CheckoutClient({
       if (!response.ok) {
         return;
       }
-      const payload = (await response.json()) as { order: PublicOrder };
-      setOrder(payload.order);
+      const payload = (await response.json()) as PaymentOrderPayload;
+      if (payload.order) {
+        setOrder(payload.order);
+      }
+      if (payload.network) {
+        setNetwork(payload.network);
+      }
+      if (payload.qrDataUrl) {
+        setQrDataUrl(payload.qrDataUrl);
+      }
     }, 8000);
 
     return () => window.clearInterval(interval);
@@ -77,6 +124,41 @@ export function CheckoutClient({
   async function copy(value: string, label: string) {
     await navigator.clipboard.writeText(value);
     setMessage(`${label} copied.`);
+  }
+
+  async function changeNetwork(nextNetwork: SupportedNetwork) {
+    if (nextNetwork === order.network || switchingNetwork) {
+      return;
+    }
+
+    setMessage(null);
+    setSwitchingNetwork(nextNetwork);
+
+    try {
+      const response = await fetch(`/api/payment-orders/${order.publicId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ network: nextNetwork }),
+      });
+      const payload = parsePayload(
+        await response.text(),
+        "Network switch returned an empty response.",
+      );
+
+      if (!response.ok || !payload.order || !payload.network || !payload.qrDataUrl) {
+        setMessage(payload.error ?? "Unable to switch payment network.");
+        return;
+      }
+
+      setOrder(payload.order);
+      setNetwork(payload.network);
+      setQrDataUrl(payload.qrDataUrl);
+      setMessage(`Payment details updated for ${payload.network.label}.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unexpected error.");
+    } finally {
+      setSwitchingNetwork(null);
+    }
   }
 
   async function verify() {
@@ -132,7 +214,7 @@ export function CheckoutClient({
           </div>
           <div>
             <span>Network</span>
-            <strong>{networkLabel}</strong>
+            <strong>{network.label}</strong>
           </div>
           <div>
             <span>Status</span>
@@ -142,7 +224,7 @@ export function CheckoutClient({
 
         <div className="payment-box">
           <div>
-            <span>{tokenStandard}</span>
+            <span>{network.tokenStandard}</span>
             <strong>Send exactly {order.expectedTransferAmountDisplay}</strong>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -155,6 +237,27 @@ export function CheckoutClient({
             Amount
             <input readOnly value={order.expectedTransferAmountDisplay.replace(" USDT", "")} />
           </label>
+          <div className="checkout-network-picker" aria-label="Payment network">
+            {networks.map((option) => (
+              <button
+                className={option.network === order.network ? "checkout-network-option active" : "checkout-network-option"}
+                disabled={!option.enabled || order.status !== "waiting" || Boolean(order.txHash) || Boolean(switchingNetwork)}
+                key={option.network}
+                onClick={() => changeNetwork(option.network)}
+                title={option.enabled ? option.label : `${option.label} is not configured yet`}
+                type="button"
+              >
+                <span>{shortNetworkLabels[option.network]}</span>
+                <small>
+                  {switchingNetwork === option.network
+                    ? "Loading"
+                    : option.enabled
+                      ? option.tokenStandard.replace("USDT ", "")
+                      : "Off"}
+                </small>
+              </button>
+            ))}
+          </div>
           <div className="copy-row">
             <button className="button button-secondary button-small" onClick={() => copy(order.receiverAddress, "Address")} type="button">
               <Copy size={16} />
@@ -169,7 +272,7 @@ export function CheckoutClient({
 
         <div className="warning-box">
           <ShieldAlert size={18} />
-          <p>{warning} Payments are final once confirmed on-chain.</p>
+          <p>{network.warning} Payments are final once confirmed on-chain.</p>
         </div>
       </section>
 

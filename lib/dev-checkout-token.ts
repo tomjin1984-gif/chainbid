@@ -1,8 +1,10 @@
 import { isProduction } from "./config/env";
+import type { SupportedNetwork } from "./domain/types";
 
 export interface DevelopmentCheckoutPayload {
   order: {
     publicId: string;
+    network?: SupportedNetwork;
     status: string;
     receiverAddress: string;
     expectedTransferAmountDisplay: string;
