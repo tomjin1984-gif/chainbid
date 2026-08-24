@@ -1381,6 +1381,15 @@ h2 {
   margin: -4px 0 0;
 }
 
+.outbid-form-status {
+  justify-self: center;
+  width: min(100%, 860px);
+  color: #ffb4a8;
+  font-size: 13px;
+  text-align: center;
+  margin: 0;
+}
+
 .section-heading {
   justify-content: space-between;
   gap: 18px;

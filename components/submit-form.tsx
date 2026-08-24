@@ -66,24 +66,12 @@ export function SubmitForm({
     if (!boostProject) {
       const missingFields = [
         { label: "project URL", value: url },
-        { label: "project name", value: name },
-        { label: "description", value: description },
       ]
         .filter((field) => !field.value.trim())
         .map((field) => field.label);
 
       if (missingFields.length) {
         setStatus(`Please enter ${formatFieldList(missingFields)} before continuing.`);
-        return;
-      }
-
-      if (name.trim().length < 2) {
-        setStatus("Project name must be at least 2 characters.");
-        return;
-      }
-
-      if (description.trim().length < 10) {
-        setStatus("Description must be at least 10 characters.");
         return;
       }
     }
@@ -105,8 +93,8 @@ export function SubmitForm({
           : {
               project: {
                 url,
-                name,
-                description,
+                name: name.trim() || undefined,
+                description: description.trim() || undefined,
                 category,
               },
               network,
@@ -173,11 +161,11 @@ export function SubmitForm({
             </label>
             <label>
               Project Name
-              <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Example Protocol" />
+              <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Auto-detected from the URL" />
             </label>
             <label>
               Description
-              <textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Short, factual description of the project." />
+              <textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Auto-detected from the website metadata" />
             </label>
             <label>
               Category

@@ -9,6 +9,7 @@ import { encodeDevelopmentCheckout } from "@/lib/dev-checkout-token";
 import { createPaymentOrderDraft } from "@/lib/payment/orders";
 import { buildPaymentPayload, warningForNetwork } from "@/lib/payment/uris";
 import { resolveProjectLogoUrl } from "@/lib/project-icons";
+import { resolveProjectMetadata } from "@/lib/project-metadata";
 import { getRepository } from "@/lib/repository";
 import { publicPaymentOrder, publicProject } from "@/lib/repository/serializers";
 import { errorMessage, jsonError, readJson } from "@/lib/http";
@@ -19,8 +20,8 @@ const orderSchema = z.object({
   project: z
     .object({
       url: z.string().min(4).max(2048),
-      name: z.string().min(2).max(96),
-      description: z.string().min(10).max(280),
+      name: z.string().max(96).optional().nullable(),
+      description: z.string().max(280).optional().nullable(),
       category: z.string().refine((value) => categories.includes(value as never), "Unsupported category."),
       xUrl: z.string().max(2048).optional().nullable(),
       logoUrl: z.string().max(2048).optional().nullable(),
@@ -59,17 +60,27 @@ export async function POST(request: Request) {
       if (duplicate) {
         project = duplicate;
       } else {
-        const logoUrl = await resolveProjectLogoUrl(
-          normalized.url,
-          payload.project.logoUrl,
-        );
+        const [metadata, logoUrl] = await Promise.all([
+          resolveProjectMetadata(normalized.url),
+          resolveProjectLogoUrl(normalized.url, payload.project.logoUrl),
+        ]);
+        const name = payload.project.name?.trim() || metadata.name;
+        const description = payload.project.description?.trim() || metadata.description;
+
+        if (name.length < 2) {
+          return jsonError("Project name could not be detected from this URL.", 400);
+        }
+
+        if (description.length < 10) {
+          return jsonError("Project description could not be detected from this URL.", 400);
+        }
 
         project = await repository.createProject({
           canonicalListingKey: normalized.canonicalListingKey,
-          slug: slugifyProjectName(payload.project.name, normalized.hostname),
-          name: payload.project.name.trim(),
+          slug: slugifyProjectName(name, normalized.hostname),
+          name,
           url: normalized.url,
-          description: payload.project.description.trim(),
+          description,
           category: payload.project.category,
           xUrl: payload.project.xUrl?.trim() || null,
           logoUrl,

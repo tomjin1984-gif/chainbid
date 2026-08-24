@@ -12,12 +12,13 @@ import {
   Rocket,
   Swords,
 } from "lucide-react";
-import { CategoryDropdown } from "@/components/category-dropdown";
 import { ClaimAmountControl } from "@/components/claim-amount-control";
+import { OutbidQuickForm } from "@/components/outbid-quick-form";
 import {
   categories,
 } from "@/lib/seed";
 import { RankedCardShell } from "@/components/ranked-card-shell";
+import { getNetworkConfigs } from "@/lib/config/networks";
 import { getPublicAppUrl } from "@/lib/config/env";
 import { claimTopBid } from "@/lib/domain/ranking";
 import { formatUsdt } from "@/lib/domain/money";
@@ -399,6 +400,8 @@ export default async function Home({
   const visibleProjects = projects.slice(pageStartIndex, pageStartIndex + leaderboardPageSize);
   const rangeStart = projects.length ? pageStartIndex + 1 : 0;
   const rangeEnd = Math.min(pageStartIndex + visibleProjects.length, projects.length);
+  const defaultNetwork =
+    getNetworkConfigs().find((network) => network.enabled)?.network ?? "bsc";
 
   return (
     <main className="site-shell home-layout">
@@ -415,18 +418,11 @@ export default async function Home({
           </p>
         </header>
 
-        <form id="outbid-submit-form" className="outbid-submit-row" action="/submit" method="get">
-          <label>
-            <span className="input-icon" aria-hidden="true">⌁</span>
-            <span className="sr-only">Project URL</span>
-            <input name="url" placeholder="https://example.xyz" />
-          </label>
-          <CategoryDropdown defaultValue="DeFi" />
-          <button className="button outbid-submit-button" type="submit">
-            Outbid
-            <ArrowRight size={18} />
-          </button>
-        </form>
+        <OutbidQuickForm
+          formId="outbid-submit-form"
+          defaultCategory="DeFi"
+          network={defaultNetwork}
+        />
 
         <p className="outbid-helper">
           Already on the list? Enter the same URL and use Boost on any ranked

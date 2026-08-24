@@ -3,6 +3,7 @@ import { categories } from "@/lib/seed";
 import { normalizeProjectUrl, slugifyProjectName } from "@/lib/domain/url";
 import { assertSafeMetadataUrl } from "@/lib/security/ssrf";
 import { resolveProjectLogoUrl } from "@/lib/project-icons";
+import { resolveProjectMetadata } from "@/lib/project-metadata";
 import { getRepository } from "@/lib/repository";
 import { publicProject } from "@/lib/repository/serializers";
 import { errorMessage, jsonError, readJson } from "@/lib/http";
@@ -10,8 +11,8 @@ import { checkRateLimit, rateLimitKey } from "@/lib/security/rate-limit";
 
 const projectSchema = z.object({
   url: z.string().min(4).max(2048),
-  name: z.string().min(2).max(96),
-  description: z.string().min(10).max(280),
+  name: z.string().max(96).optional().nullable(),
+  description: z.string().max(280).optional().nullable(),
   category: z.string().refine((value) => categories.includes(value as never), "Unsupported category."),
   xUrl: z.string().max(2048).optional().nullable(),
   logoUrl: z.string().max(2048).optional().nullable(),
@@ -45,14 +46,27 @@ export async function POST(request: Request) {
       );
     }
 
-    const logoUrl = await resolveProjectLogoUrl(normalized.url, payload.logoUrl);
+    const [metadata, logoUrl] = await Promise.all([
+      resolveProjectMetadata(normalized.url),
+      resolveProjectLogoUrl(normalized.url, payload.logoUrl),
+    ]);
+    const name = payload.name?.trim() || metadata.name;
+    const description = payload.description?.trim() || metadata.description;
+
+    if (name.length < 2) {
+      return jsonError("Project name could not be detected from this URL.", 400);
+    }
+
+    if (description.length < 10) {
+      return jsonError("Project description could not be detected from this URL.", 400);
+    }
 
     const project = await repository.createProject({
       canonicalListingKey: normalized.canonicalListingKey,
-      slug: slugifyProjectName(payload.name, normalized.hostname),
-      name: payload.name.trim(),
+      slug: slugifyProjectName(name, normalized.hostname),
+      name,
       url: normalized.url,
-      description: payload.description.trim(),
+      description,
       category: payload.category,
       xUrl: payload.xUrl?.trim() || null,
       logoUrl,
