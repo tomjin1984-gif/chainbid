@@ -34,6 +34,9 @@ const activityIcons = {
 };
 const leaderboardPageSize = 20;
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 function clampPage(page: string | undefined, pageCount: number) {
   const parsedPage = Number.parseInt(page ?? "1", 10);
   if (!Number.isFinite(parsedPage)) {
