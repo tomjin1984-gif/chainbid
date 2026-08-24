@@ -6,6 +6,10 @@ import { ensureTxHint, isExpired, verificationResult } from "./base";
 
 const TRANSFER_TOPIC =
   "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+const FALLBACK_RPC_URLS: Partial<Record<Extract<SupportedNetwork, "ethereum" | "bsc">, string[]>> = {
+  ethereum: ["https://ethereum-rpc.publicnode.com"],
+  bsc: ["https://bsc-rpc.publicnode.com", "https://bsc-dataseed.bnbchain.org"],
+};
 
 interface EvmLog {
   address: string;
@@ -34,8 +38,25 @@ function amountFromLogData(data: string) {
   return BigInt(data || "0x0");
 }
 
+function rpcOptions(network: Extract<SupportedNetwork, "ethereum" | "bsc">, primaryUrl: string) {
+  return {
+    timeoutMs: 4_000,
+    retries: 0,
+    fallbackUrls: (FALLBACK_RPC_URLS[network] ?? []).filter((url) => url !== primaryUrl),
+  };
+}
+
+function providerFailureReason(error: unknown, label: string) {
+  const message = error instanceof Error ? error.message : "EVM verification failed.";
+  if (message.includes("empty response") || message.includes("unreadable JSON")) {
+    return `${label} RPC did not return usable data. Please wait a few seconds and check again.`;
+  }
+
+  return message;
+}
+
 export class EvmUsdtVerifier implements PaymentVerifier {
-  readonly network: SupportedNetwork;
+  readonly network: Extract<SupportedNetwork, "ethereum" | "bsc">;
 
   constructor(network: Extract<SupportedNetwork, "ethereum" | "bsc">) {
     this.network = network;
@@ -66,6 +87,7 @@ export class EvmUsdtVerifier implements PaymentVerifier {
         config.rpcUrl,
         "eth_getTransactionReceipt",
         [txHash],
+        rpcOptions(this.network, config.rpcUrl),
       );
 
       if (!receipt) {
@@ -160,7 +182,12 @@ export class EvmUsdtVerifier implements PaymentVerifier {
         });
       }
 
-      const latestHex = await requestJsonRpc<string>(config.rpcUrl, "eth_blockNumber", []);
+      const latestHex = await requestJsonRpc<string>(
+        config.rpcUrl,
+        "eth_blockNumber",
+        [],
+        rpcOptions(this.network, config.rpcUrl),
+      );
       const latest = BigInt(latestHex);
       const block = BigInt(receipt.blockNumber);
       const confirmations = Number(latest - block + BigInt(1));
@@ -198,7 +225,7 @@ export class EvmUsdtVerifier implements PaymentVerifier {
         status: "provider_error",
         network: this.network,
         txHash,
-        failureReason: error instanceof Error ? error.message : "EVM verification failed.",
+        failureReason: providerFailureReason(error, config.label),
       });
     }
   }

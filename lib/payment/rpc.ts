@@ -9,46 +9,60 @@ export async function requestJsonRpc<T>(
   rpcUrl: string,
   method: string,
   params: unknown[],
-  options?: { timeoutMs?: number; retries?: number },
+  options?: { timeoutMs?: number; retries?: number; fallbackUrls?: string[] },
 ): Promise<T> {
-  const timeoutMs = options?.timeoutMs ?? 10_000;
-  const retries = options?.retries ?? 2;
+  const timeoutMs = options?.timeoutMs ?? 5_000;
+  const retries = options?.retries ?? 1;
+  const urls = [...new Set([rpcUrl, ...(options?.fallbackUrls ?? [])].filter(Boolean))];
   let lastError: unknown;
 
-  for (let attempt = 0; attempt <= retries; attempt += 1) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  for (const url of urls) {
+    for (let attempt = 0; attempt <= retries; attempt += 1) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
-    try {
-      const response = await fetch(rpcUrl, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: attempt + 1,
-          method,
-          params,
-        }),
-        signal: controller.signal,
-      });
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: attempt + 1,
+            method,
+            params,
+          }),
+          signal: controller.signal,
+        });
 
-      if (!response.ok) {
-        throw new Error(`RPC ${method} failed with HTTP ${response.status}`);
+        const text = await response.text();
+        if (!response.ok) {
+          throw new Error(`RPC ${method} failed with HTTP ${response.status}`);
+        }
+
+        if (!text.trim()) {
+          throw new Error(`RPC ${method} returned an empty response.`);
+        }
+
+        let payload: JsonRpcResponse<T>;
+        try {
+          payload = JSON.parse(text) as JsonRpcResponse<T>;
+        } catch {
+          throw new Error(`RPC ${method} returned unreadable JSON.`);
+        }
+
+        if (payload.error) {
+          throw new Error(`RPC ${method} failed: ${payload.error.message}`);
+        }
+
+        return payload.result as T;
+      } catch (error) {
+        lastError = error;
+        if (attempt < retries) {
+          await new Promise((resolve) => setTimeout(resolve, 250 * 2 ** attempt));
+        }
+      } finally {
+        clearTimeout(timeout);
       }
-
-      const payload = (await response.json()) as JsonRpcResponse<T>;
-      if (payload.error) {
-        throw new Error(`RPC ${method} failed: ${payload.error.message}`);
-      }
-
-      return payload.result as T;
-    } catch (error) {
-      lastError = error;
-      if (attempt < retries) {
-        await new Promise((resolve) => setTimeout(resolve, 250 * 2 ** attempt));
-      }
-    } finally {
-      clearTimeout(timeout);
     }
   }
 
@@ -60,8 +74,8 @@ export async function requestJson<T>(
   payload: unknown,
   options?: { timeoutMs?: number; retries?: number },
 ): Promise<T> {
-  const timeoutMs = options?.timeoutMs ?? 10_000;
-  const retries = options?.retries ?? 2;
+  const timeoutMs = options?.timeoutMs ?? 5_000;
+  const retries = options?.retries ?? 1;
   let lastError: unknown;
 
   for (let attempt = 0; attempt <= retries; attempt += 1) {
@@ -80,7 +94,16 @@ export async function requestJson<T>(
         throw new Error(`HTTP ${response.status} from ${url}`);
       }
 
-      return (await response.json()) as T;
+      const text = await response.text();
+      if (!text.trim()) {
+        throw new Error(`HTTP ${url} returned an empty response.`);
+      }
+
+      try {
+        return JSON.parse(text) as T;
+      } catch {
+        throw new Error(`HTTP ${url} returned unreadable JSON.`);
+      }
     } catch (error) {
       lastError = error;
       if (attempt < retries) {
