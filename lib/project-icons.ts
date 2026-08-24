@@ -277,6 +277,7 @@ export async function discoverProjectIconUrl(
 export async function resolveProjectLogoUrl(
   projectUrl: string,
   suppliedLogoUrl?: string | null,
+  fetcher: FetchLike = fetch,
 ) {
   const supplied = suppliedLogoUrl?.trim();
   if (supplied) {
@@ -286,5 +287,19 @@ export async function resolveProjectLogoUrl(
     }
   }
 
-  return discoverProjectIconUrl(projectUrl);
+  const discovered = await discoverProjectIconUrl(projectUrl, fetcher);
+  if (discovered) {
+    return discovered;
+  }
+
+  return projectFaviconFallbackUrl(projectUrl);
+}
+
+export function projectFaviconFallbackUrl(projectUrl: string) {
+  try {
+    const { hostname } = new URL(projectUrl);
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostname)}&sz=64`;
+  } catch {
+    return null;
+  }
 }

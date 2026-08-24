@@ -21,6 +21,7 @@ import { RankedCardShell } from "@/components/ranked-card-shell";
 import { getPublicAppUrl } from "@/lib/config/env";
 import { claimTopBid } from "@/lib/domain/ranking";
 import { formatUsdt } from "@/lib/domain/money";
+import { projectFaviconFallbackUrl } from "@/lib/project-icons";
 import { getRepository } from "@/lib/repository";
 import type { ActivityEventRecord, LeaderboardEntry } from "@/lib/domain/types";
 
@@ -33,6 +34,10 @@ const activityIcons = {
   manual_review: Flame,
 };
 const leaderboardPageSize = 20;
+
+function projectLogoUrl(project: Pick<LeaderboardEntry, "logoUrl" | "url">) {
+  return project.logoUrl ?? projectFaviconFallbackUrl(project.url);
+}
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -136,7 +141,7 @@ function LatestActivityStrip({
       age: formatActivityAge(event.createdAt),
       icon: Icon,
       initials: project?.name.slice(0, 2).toUpperCase(),
-      logoUrl: project?.logoUrl ?? null,
+      logoUrl: project ? projectLogoUrl(project) : null,
     };
   });
 
@@ -210,10 +215,10 @@ function ProjectRankCard({
           </span>
         </div>
         <div className="rank-project">
-          {project.logoUrl ? (
+          {projectLogoUrl(project) ? (
             <img
               className="logo-image"
-              src={project.logoUrl}
+              src={projectLogoUrl(project) ?? ""}
               alt=""
               width={42}
               height={42}

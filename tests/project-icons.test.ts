@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   discoverProjectIconUrl,
   extractIconCandidateUrls,
+  resolveProjectLogoUrl,
   sanitizeProjectIconUrl,
 } from "../lib/project-icons";
 
@@ -75,4 +76,15 @@ test("treats unsafe or unreachable project icons as missing", async () => {
   };
 
   assert.equal(await discoverProjectIconUrl("https://example.com", fetcher), null);
+});
+
+test("uses a favicon service fallback when direct discovery fails", async () => {
+  const fetcher = async () => {
+    throw new Error("network unavailable");
+  };
+
+  assert.equal(
+    await resolveProjectLogoUrl("https://www.binance.com", null, fetcher),
+    "https://www.google.com/s2/favicons?domain=www.binance.com&sz=64",
+  );
 });
