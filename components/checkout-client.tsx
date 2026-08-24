@@ -241,7 +241,7 @@ export function CheckoutClient({
             {networks.map((option) => (
               <button
                 className={option.network === order.network ? "checkout-network-option active" : "checkout-network-option"}
-                disabled={!option.enabled || order.status !== "waiting" || Boolean(order.txHash) || Boolean(switchingNetwork)}
+                disabled={!option.enabled || order.status !== "waiting" || Boolean(switchingNetwork)}
                 key={option.network}
                 onClick={() => changeNetwork(option.network)}
                 title={option.enabled ? option.label : `${option.label} is not configured yet`}

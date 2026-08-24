@@ -94,7 +94,7 @@ export async function PATCH(
       return jsonError("Payment order was not found.", 404);
     }
 
-    if (order.status !== "waiting" || order.txHash) {
+    if (order.status !== "waiting") {
       return jsonError("This order can no longer change payment network.", 409);
     }
 

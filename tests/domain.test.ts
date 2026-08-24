@@ -6,7 +6,7 @@ import { claimTopBid, sortProjectsForLeaderboard, targetToPassRank } from "../li
 import { normalizeProjectUrl } from "../lib/domain/url";
 import { errorMessage } from "../lib/http";
 import { assertSafeMetadataUrl } from "../lib/security/ssrf";
-import { createPaymentOrderDraft } from "../lib/payment/orders";
+import { createPaymentOrderDraft, createPaymentOrderDraftForPublicId } from "../lib/payment/orders";
 import { processPaymentOrder } from "../lib/payment/worker";
 import { devRepository } from "../lib/repository/dev-store";
 import type { PaymentVerifier, VerificationResult } from "../lib/payment/types";
@@ -127,6 +127,47 @@ test("credits a confirmed payment order only once", async () => {
 
   const after = (await devRepository.listBidsForProject(project.id)).length;
   assert.equal(after, before + 1);
+});
+
+test("provider lookup failures do not lock a waiting payment order to a hash", async () => {
+  const project = await devRepository.getProjectBySlug("chainlink");
+  assert.ok(project);
+
+  const draft = createPaymentOrderDraft({
+    projectId: project.id,
+    network: "bsc",
+    bidCreditUsdt: BigInt(11),
+    now: new Date("2026-08-23T00:10:00.000Z"),
+  });
+  const order = await devRepository.createPaymentOrder(draft);
+  const result: VerificationResult = {
+    status: "provider_error",
+    network: "bsc",
+    txHash: "0xlookupfailed",
+    tokenContractOrMint: null,
+    senderAddress: null,
+    receiverAddress: null,
+    amountAtomic: null,
+    blockNumberOrSlot: null,
+    confirmations: 0,
+    rawReference: null,
+    failureReason: "RPC returned an empty response.",
+  };
+
+  await devRepository.recordVerification(order.publicId, result, "waiting");
+  const updated = await devRepository.getPaymentOrder(order.publicId);
+  assert.equal(updated?.status, "waiting");
+  assert.equal(updated?.txHash, null);
+
+  const ethDraft = createPaymentOrderDraftForPublicId({
+    publicId: order.publicId,
+    projectId: project.id,
+    network: "ethereum",
+    bidCreditUsdt: order.bidCreditUsdt,
+    now: new Date("2026-08-23T00:12:00.000Z"),
+  });
+  const switched = await devRepository.updateWaitingPaymentOrderNetwork(order.publicId, ethDraft);
+  assert.equal(switched?.network, "ethereum");
 });
 
 test("maps underpaid and overpaid verifier results without crediting", async () => {

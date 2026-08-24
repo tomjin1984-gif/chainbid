@@ -12,6 +12,10 @@ import type { CreateProjectInput, Repository } from "./types";
 
 type Row = Record<string, unknown>;
 
+function shouldPersistTxOnOrder(result: VerificationResult) {
+  return result.status !== "not_found" && result.status !== "provider_error";
+}
+
 function serviceUrl(path: string) {
   return `${requireEnv("SUPABASE_URL").replace(/\/+$/, "")}${path}`;
 }
@@ -145,7 +149,7 @@ export class SupabaseRestRepository implements Repository {
 
   async updateWaitingPaymentOrderNetwork(publicId: string, draft: PaymentOrderDraft) {
     const rows = await supabaseFetch<Row[]>(
-      `/rest/v1/payment_orders?public_id=eq.${encodeURIComponent(publicId)}&status=eq.waiting&tx_hash=is.null`,
+      `/rest/v1/payment_orders?public_id=eq.${encodeURIComponent(publicId)}&status=eq.waiting`,
       {
         method: "PATCH",
         body: JSON.stringify({
@@ -156,6 +160,7 @@ export class SupabaseRestRepository implements Repository {
           expected_transfer_amount_display: draft.expectedTransferAmountDisplay,
           expected_sender_address: draft.expectedSenderAddress,
           expires_at: draft.expiresAt,
+          tx_hash: null,
           confirmations: 0,
           block_number_or_slot: null,
           failure_reason: null,
@@ -179,7 +184,9 @@ export class SupabaseRestRepository implements Repository {
     result: VerificationResult,
     nextStatus: PaymentOrderStatus,
   ) {
-    if (result.txHash) {
+    const persistTx = result.txHash && shouldPersistTxOnOrder(result);
+
+    if (persistTx) {
       await supabaseFetch("/rest/v1/blockchain_transactions?on_conflict=network,tx_hash", {
         method: "POST",
         headers: { prefer: "resolution=merge-duplicates,return=minimal" },
@@ -204,10 +211,10 @@ export class SupabaseRestRepository implements Repository {
         method: "PATCH",
         body: JSON.stringify({
           status: nextStatus,
-          tx_hash: result.txHash,
+          tx_hash: persistTx ? result.txHash : null,
           block_number_or_slot: result.blockNumberOrSlot,
           confirmations: result.confirmations,
-          detected_at: result.txHash ? new Date().toISOString() : null,
+          detected_at: persistTx ? new Date().toISOString() : null,
           confirmed_at: nextStatus === "confirmed" ? new Date().toISOString() : null,
           failure_reason: result.failureReason,
         }),

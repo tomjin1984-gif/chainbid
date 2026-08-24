@@ -16,6 +16,10 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function shouldPersistTxOnOrder(result: VerificationResult) {
+  return result.status !== "not_found" && result.status !== "provider_error";
+}
+
 function id(prefix: string) {
   const uuid = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
   return `${prefix}_${uuid.replace(/[^a-zA-Z0-9]/g, "").slice(0, 24)}`;
@@ -208,7 +212,9 @@ class DevRepository implements Repository {
       return null;
     }
 
-    if (result.txHash) {
+    const persistTx = result.txHash && shouldPersistTxOnOrder(result);
+
+    if (persistTx) {
       const txKey = `${result.network}:${result.txHash}`;
       if (this.usedTransactions.has(txKey) && order.txHash !== result.txHash) {
         nextStatus = "manual_review";
@@ -219,10 +225,10 @@ class DevRepository implements Repository {
     const updated: PaymentOrderRecord = {
       ...order,
       status: nextStatus,
-      txHash: result.txHash ?? order.txHash,
+      txHash: persistTx ? result.txHash : null,
       blockNumberOrSlot: result.blockNumberOrSlot,
       confirmations: result.confirmations,
-      detectedAt: order.detectedAt ?? (result.txHash ? nowIso() : null),
+      detectedAt: persistTx ? (order.detectedAt ?? nowIso()) : null,
       confirmedAt: nextStatus === "confirmed" ? nowIso() : order.confirmedAt,
       failureReason: result.failureReason,
     };
