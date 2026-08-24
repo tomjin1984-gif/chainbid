@@ -1,4 +1,4 @@
-import { getAppEnv, isProduction, readEnv } from "@/lib/config/env";
+import { getAppEnv, isHostedRuntime, isProduction, readEnv } from "@/lib/config/env";
 import { devRepository } from "./dev-store";
 import { SupabaseRestRepository } from "./supabase-rest";
 import type { Repository } from "./types";
@@ -11,6 +11,7 @@ export function getRepositoryDiagnostics() {
 
   return {
     appEnv: getAppEnv(),
+    hostedRuntime: isHostedRuntime(),
     source:
       supabaseUrlConfigured && serviceRoleKeyConfigured
         ? "supabase"
@@ -34,8 +35,8 @@ export function getRepository(): Repository {
     return repository;
   }
 
-  if (isProduction()) {
-    throw new Error("Production requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.");
+  if (isProduction() || isHostedRuntime()) {
+    throw new Error("Hosted runtime requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.");
   }
 
   cached = { key: cacheKey, repository: devRepository };

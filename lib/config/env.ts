@@ -13,6 +13,15 @@ export function isProduction() {
   return getAppEnv() === "production";
 }
 
+export function isHostedRuntime() {
+  const hostname = process.env.CHAIN_BID_RUNTIME_HOST?.trim().toLowerCase();
+  if (!hostname) {
+    return false;
+  }
+
+  return !["localhost", "127.0.0.1", "::1"].includes(hostname);
+}
+
 export function readEnv(name: string, fallback?: string): string {
   const value = process.env[name];
   if (value && value.trim()) {

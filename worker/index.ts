@@ -21,7 +21,9 @@ interface ExecutionContext {
   passThroughOnException(): void;
 }
 
-function syncRuntimeEnv(env: Env) {
+function syncRuntimeEnv(env: Env, request: Request) {
+  process.env.CHAIN_BID_RUNTIME_HOST = new URL(request.url).hostname;
+
   for (const [key, value] of Object.entries(env)) {
     if (typeof value === "string") {
       process.env[key] = value;
@@ -37,7 +39,7 @@ function syncRuntimeEnv(env: Env) {
 
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    syncRuntimeEnv(env);
+    syncRuntimeEnv(env, request);
 
     const url = new URL(request.url);
 
