@@ -233,6 +233,15 @@ export function extractProjectMetadata(html: string, projectUrl: string) {
   return { name, description };
 }
 
+export function inferProjectMetadataFromUrl(projectUrl: string): ProjectMetadata {
+  const pageUrl = assertSafeMetadataUrl(projectUrl);
+  const name = hostnameName(pageUrl);
+  return {
+    name,
+    description: fallbackDescription(name, pageUrl),
+  };
+}
+
 export async function resolveProjectMetadata(
   projectUrl: string,
   fetcher: FetchLike = fetch,
@@ -254,9 +263,5 @@ export async function resolveProjectMetadata(
     // Metadata is best-effort; checkout should still be possible with a URL.
   }
 
-  const name = hostnameName(pageUrl);
-  return {
-    name,
-    description: fallbackDescription(name, pageUrl),
-  };
+  return inferProjectMetadataFromUrl(pageUrl.toString());
 }
