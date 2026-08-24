@@ -279,7 +279,6 @@ html[data-theme="light"] .chip-active {
 
 html[data-theme="light"] .latest-activity-heading,
 html[data-theme="light"] .project-name,
-html[data-theme="light"] .domain,
 html[data-theme="light"] .rank-bid strong,
 html[data-theme="light"] .site-stats-footer p:first-child,
 html[data-theme="light"] .form-header h1,
@@ -428,7 +427,6 @@ h2 {
 }
 
 .panel-label,
-.domain,
 .bid-cell span,
 .action-cell span {
   color: var(--muted);
@@ -1494,11 +1492,6 @@ h2 {
   display: inline-block;
   font-weight: 800;
   margin-bottom: 4px;
-}
-
-.domain {
-  display: block;
-  margin-bottom: 6px;
 }
 
 .project-cell p {
@@ -2722,14 +2715,6 @@ html[data-theme="light"] .address-card {
     overflow: hidden;
     margin-bottom: 0;
     font-size: 14px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .domain {
-    overflow: hidden;
-    margin: 1px 0 0;
-    font-size: 11px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }

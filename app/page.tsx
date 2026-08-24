@@ -181,7 +181,6 @@ function ProjectRankCard({
   project: LeaderboardEntry;
   featured?: boolean;
 }) {
-  const domain = new URL(project.url).hostname;
   const isTopRank = project.rank <= 3;
   const cardClassName = [
     "ranked-card",
@@ -222,7 +221,6 @@ function ProjectRankCard({
           )}
           <div>
             <span className="project-name">{project.name}</span>
-            <span className="domain">{domain}</span>
             <p>{project.description}</p>
           </div>
         </div>
