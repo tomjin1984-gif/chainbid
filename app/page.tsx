@@ -18,7 +18,10 @@ import {
   categories,
 } from "@/lib/seed";
 import { RankedCardShell } from "@/components/ranked-card-shell";
-import { getNetworkConfigs } from "@/lib/config/networks";
+import {
+  getNetworkConfigs,
+  isNetworkAvailableForCheckout,
+} from "@/lib/config/networks";
 import { getPublicAppUrl } from "@/lib/config/env";
 import { claimTopBid } from "@/lib/domain/ranking";
 import { formatUsdt } from "@/lib/domain/money";
@@ -400,8 +403,12 @@ export default async function Home({
   const visibleProjects = projects.slice(pageStartIndex, pageStartIndex + leaderboardPageSize);
   const rangeStart = projects.length ? pageStartIndex + 1 : 0;
   const rangeEnd = Math.min(pageStartIndex + visibleProjects.length, projects.length);
-  const defaultNetwork =
-    getNetworkConfigs().find((network) => network.enabled)?.network ?? "bsc";
+  const networks = getNetworkConfigs().map((network) => ({
+    network: network.network,
+    label: network.label,
+    tokenStandard: network.tokenStandard,
+    enabled: isNetworkAvailableForCheckout(network),
+  }));
 
   return (
     <main className="site-shell home-layout">
@@ -421,7 +428,7 @@ export default async function Home({
         <OutbidQuickForm
           formId="outbid-submit-form"
           defaultCategory="DeFi"
-          network={defaultNetwork}
+          networks={networks}
         />
 
         <p className="outbid-helper">

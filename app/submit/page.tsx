@@ -1,5 +1,8 @@
 import { SubmitForm } from "@/components/submit-form";
-import { getNetworkConfigs } from "@/lib/config/networks";
+import {
+  getNetworkConfigs,
+  isNetworkAvailableForCheckout,
+} from "@/lib/config/networks";
 import { formatUsdt } from "@/lib/domain/money";
 import { getRepository } from "@/lib/repository";
 
@@ -27,7 +30,7 @@ export default async function SubmitPage({
     network: network.network,
     label: network.label,
     tokenStandard: network.tokenStandard,
-    enabled: network.enabled,
+    enabled: isNetworkAvailableForCheckout(network),
     sourceStatus: network.sourceStatus,
   }));
 

@@ -177,3 +177,12 @@ export function assertNetworkReadyForCheckout(config: NetworkTokenConfig) {
     throw new Error(`${config.label} USDT contract source requires manual approval before production checkout.`);
   }
 }
+
+export function isNetworkAvailableForCheckout(config: NetworkTokenConfig) {
+  return (
+    config.enabled &&
+    Boolean(config.receiverAddress) &&
+    Boolean(config.usdtContractOrMint) &&
+    (!isProduction() || Boolean(config.rpcUrl))
+  );
+}

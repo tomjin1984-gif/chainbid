@@ -214,6 +214,7 @@ html[data-theme="light"] .theme-toggle,
 html[data-theme="light"] .outbid-status-pill,
 html[data-theme="light"] .outbid-submit-row label,
 html[data-theme="light"] .category-dropdown-trigger,
+html[data-theme="light"] .outbid-network-picker,
 html[data-theme="light"] .category-bar,
 html[data-theme="light"] .ranked-card,
 html[data-theme="light"] .latest-activity-strip,
@@ -1239,11 +1240,11 @@ h2 {
 
 .outbid-submit-row {
   display: grid;
-  grid-template-columns: minmax(260px, 1.9fr) minmax(220px, 0.95fr) auto;
+  grid-template-columns: minmax(240px, 1.6fr) minmax(190px, 0.8fr) minmax(250px, 0.9fr) auto;
   gap: 12px;
   align-items: center;
   min-width: 0;
-  width: min(100%, 860px);
+  width: min(100%, 1080px);
   max-width: 100%;
   justify-self: center;
   margin-top: 0;
@@ -1358,6 +1359,57 @@ h2 {
 
 .outbid-submit-row select {
   cursor: pointer;
+}
+
+.outbid-network-picker {
+  min-width: 0;
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+  padding: 4px;
+}
+
+.outbid-network-option {
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  gap: 1px;
+  padding: 4px 7px;
+  line-height: 1;
+}
+
+.outbid-network-option span {
+  color: inherit;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.outbid-network-option small {
+  color: inherit;
+  font-size: 8px;
+  font-weight: 700;
+  opacity: 0.68;
+  text-transform: uppercase;
+}
+
+.outbid-network-option.active {
+  border-color: rgba(0, 224, 164, 0.32);
+  background: rgba(0, 224, 164, 0.14);
+  color: var(--accent);
+}
+
+.outbid-network-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
 }
 
 .input-icon,

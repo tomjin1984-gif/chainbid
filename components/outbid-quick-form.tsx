@@ -4,18 +4,37 @@ import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { CategoryDropdown } from "@/components/category-dropdown";
+import type { SupportedNetwork } from "@/lib/domain/types";
+
+interface NetworkOption {
+  network: SupportedNetwork;
+  label: string;
+  tokenStandard: string;
+  enabled: boolean;
+}
+
+const shortNetworkLabels: Record<SupportedNetwork, string> = {
+  tron: "TRON",
+  ethereum: "ETH",
+  bsc: "BNB",
+  solana: "SOL",
+};
 
 export function OutbidQuickForm({
   formId,
   defaultCategory = "DeFi",
-  network,
+  networks,
 }: {
   formId: string;
   defaultCategory?: string;
-  network: "tron" | "ethereum" | "bsc" | "solana";
+  networks: NetworkOption[];
 }) {
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [network, setNetwork] = useState<SupportedNetwork>(
+    networks.find((item) => item.enabled)?.network ?? "bsc",
+  );
+  const selectedNetwork = networks.find((item) => item.network === network);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -29,6 +48,11 @@ export function OutbidQuickForm({
 
     if (!url) {
       setStatus("Enter a project URL before continuing.");
+      return;
+    }
+
+    if (!selectedNetwork?.enabled) {
+      setStatus("Choose an available payment network before continuing.");
       return;
     }
 
@@ -78,6 +102,21 @@ export function OutbidQuickForm({
           <input name="url" placeholder="https://example.xyz" />
         </label>
         <CategoryDropdown defaultValue={defaultCategory} />
+        <div className="outbid-network-picker" aria-label="Payment network">
+          {networks.map((option) => (
+            <button
+              className={option.network === network ? "outbid-network-option active" : "outbid-network-option"}
+              disabled={!option.enabled || busy}
+              key={option.network}
+              onClick={() => setNetwork(option.network)}
+              title={option.enabled ? option.label : `${option.label} is not configured yet`}
+              type="button"
+            >
+              <span>{shortNetworkLabels[option.network]}</span>
+              <small>{option.enabled ? option.tokenStandard.replace("USDT ", "") : "Off"}</small>
+            </button>
+          ))}
+        </div>
         <button className="button outbid-submit-button" type="submit" disabled={busy}>
           {busy ? "Creating" : "Outbid"}
           {busy ? <CheckCircle2 size={18} /> : <ArrowRight size={18} />}
