@@ -33,6 +33,7 @@ export async function GlobalHeader() {
             <div className="topbar-links">
               <a href="/#leaderboard">Leaderboard</a>
               <a href="/categories">Categories</a>
+              <a href="/manual-transaction-check">Manual Check</a>
               <a href="/rules">Rules</a>
               <a href="/about">About</a>
             </div>

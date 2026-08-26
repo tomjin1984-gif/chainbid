@@ -156,6 +156,14 @@ export class SupabaseRestRepository implements Repository {
     return rows[0] ? paymentOrderFromRow(rows[0]) : null;
   }
 
+  async findPaymentOrdersByTxHash(txHash: string) {
+    const rows = await supabaseFetch<Row[]>(
+      `/rest/v1/payment_orders?select=*&tx_hash=eq.${encodeURIComponent(txHash)}&order=created_at.desc&limit=20`,
+      { method: "GET" },
+    );
+    return rows.map(paymentOrderFromRow);
+  }
+
   async updateWaitingPaymentOrderNetwork(publicId: string, draft: PaymentOrderDraft) {
     const rows = await supabaseFetch<Row[]>(
       `/rest/v1/payment_orders?public_id=eq.${encodeURIComponent(publicId)}&status=eq.waiting`,

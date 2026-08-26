@@ -7,7 +7,9 @@ import { normalizeProjectUrl } from "../lib/domain/url";
 import { errorMessage } from "../lib/http";
 import { assertSafeMetadataUrl } from "../lib/security/ssrf";
 import { createPaymentOrderDraft, createPaymentOrderDraftForPublicId } from "../lib/payment/orders";
+import { attachManualCheckToOrder } from "../lib/payment/manual-check";
 import { processPaymentOrder } from "../lib/payment/worker";
+import { SolanaUsdtVerifier } from "../lib/payment/verifiers/solana";
 import { devRepository } from "../lib/repository/dev-store";
 import type { PaymentVerifier, VerificationResult } from "../lib/payment/types";
 import type { PaymentOrderRecord } from "../lib/domain/types";
@@ -240,6 +242,139 @@ test("rechecking a confirming payment can credit it after finality", async () =>
 
   const credited = await devRepository.getPaymentOrder(order.publicId);
   assert.equal(credited?.status, "credited");
+});
+
+test("solana verifier matches an SPL destination token account", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalRpc = process.env.SOLANA_RPC_URL;
+  const draft = createPaymentOrderDraft({
+    projectId: "proj_solana",
+    network: "solana",
+    bidCreditUsdt: BigInt(5),
+  });
+  const order: PaymentOrderRecord = {
+    id: "pay_solana",
+    publicId: draft.publicId,
+    projectId: draft.projectId,
+    bidId: null,
+    network: draft.network,
+    receiverAddress: draft.receiverAddress,
+    tokenContractOrMint: draft.tokenContractOrMint,
+    bidCreditUsdt: draft.bidCreditUsdt,
+    expectedTransferAmountAtomic: draft.expectedTransferAmountAtomic,
+    expectedTransferAmountDisplay: draft.expectedTransferAmountDisplay,
+    expectedSenderAddress: null,
+    status: "waiting",
+    txHash: null,
+    blockNumberOrSlot: null,
+    confirmations: 0,
+    createdAt: new Date().toISOString(),
+    expiresAt: draft.expiresAt,
+    detectedAt: null,
+    confirmedAt: null,
+    creditedAt: null,
+    failureReason: null,
+  };
+  const destinationTokenAccount = "ReceiverAssociatedTokenAccount11111111111111111111";
+
+  process.env.SOLANA_RPC_URL = "https://solana.test";
+  globalThis.fetch = (async () => Response.json({
+    jsonrpc: "2.0",
+    id: 1,
+    result: {
+      slot: 12345,
+      transaction: {
+        message: {
+          accountKeys: ["payer", destinationTokenAccount],
+          instructions: [
+            {
+              parsed: {
+                type: "transferChecked",
+                info: {
+                  mint: order.tokenContractOrMint,
+                  destination: destinationTokenAccount,
+                  tokenAmount: {
+                    amount: order.expectedTransferAmountAtomic.toString(),
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+      meta: {
+        err: null,
+        preTokenBalances: [
+          {
+            accountIndex: 1,
+            mint: order.tokenContractOrMint,
+            uiTokenAmount: { amount: "0", decimals: 6 },
+          },
+        ],
+        postTokenBalances: [
+          {
+            accountIndex: 1,
+            mint: order.tokenContractOrMint,
+            uiTokenAmount: {
+              amount: order.expectedTransferAmountAtomic.toString(),
+              decimals: 6,
+            },
+          },
+        ],
+      },
+    },
+  })) as typeof fetch;
+
+  try {
+    const result = await new SolanaUsdtVerifier().verifyPayment(order, "solana_signature");
+    assert.equal(result.status, "confirmed");
+    assert.equal(result.amountAtomic, order.expectedTransferAmountAtomic);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalRpc === undefined) {
+      delete process.env.SOLANA_RPC_URL;
+    } else {
+      process.env.SOLANA_RPC_URL = originalRpc;
+    }
+  }
+});
+
+test("manual transaction check does not credit an unrelated confirmed order", async () => {
+  const project = await devRepository.getProjectBySlug("dogecoin");
+  assert.ok(project);
+
+  const draft = createPaymentOrderDraft({
+    projectId: project.id,
+    network: "bsc",
+    bidCreditUsdt: BigInt(6),
+  });
+  const order = await devRepository.createPaymentOrder(draft);
+  await devRepository.recordVerification(
+    order.publicId,
+    {
+      status: "confirmed",
+      network: "bsc",
+      txHash: "0xknownpayment",
+      tokenContractOrMint: order.tokenContractOrMint,
+      senderAddress: "0xsender",
+      receiverAddress: order.receiverAddress,
+      amountAtomic: order.expectedTransferAmountAtomic,
+      blockNumberOrSlot: "0x1",
+      confirmations: 45,
+      rawReference: "0xknownpayment",
+      failureReason: null,
+    },
+    "confirmed",
+  );
+
+  const outcome = await attachManualCheckToOrder({
+    order: (await devRepository.getPaymentOrder(order.publicId)) ?? order,
+    repository: devRepository,
+    txHash: "0xdifferentpayment",
+  });
+
+  assert.equal(outcome, null);
+  assert.equal((await devRepository.getPaymentOrder(order.publicId))?.status, "confirmed");
 });
 
 test("maps underpaid and overpaid verifier results without crediting", async () => {

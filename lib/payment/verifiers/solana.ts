@@ -14,17 +14,26 @@ interface SolanaTokenBalance {
   };
 }
 
+interface SolanaParsedInstruction {
+  parsed?: {
+    type?: string;
+    info?: Record<string, unknown>;
+  };
+}
+
 interface SolanaTransaction {
   slot: number;
   transaction: {
     message: {
       accountKeys: Array<string | { pubkey: string }>;
+      instructions?: SolanaParsedInstruction[];
     };
   };
   meta: {
     err: unknown;
     preTokenBalances?: SolanaTokenBalance[];
     postTokenBalances?: SolanaTokenBalance[];
+    innerInstructions?: Array<{ instructions?: SolanaParsedInstruction[] }>;
   };
 }
 
@@ -33,15 +42,71 @@ function accountKeyAt(tx: SolanaTransaction, index: number) {
   return typeof key === "string" ? key : key?.pubkey;
 }
 
+function tokenBalanceKey(balance: SolanaTokenBalance, owner = balance.owner ?? "") {
+  return `${balance.accountIndex}:${balance.mint}:${owner}`;
+}
+
 function tokenBalanceMap(balances: SolanaTokenBalance[] | undefined) {
   const map = new Map<string, bigint>();
   for (const balance of balances ?? []) {
-    map.set(
-      `${balance.accountIndex}:${balance.mint}:${balance.owner ?? ""}`,
-      BigInt(balance.uiTokenAmount.amount),
-    );
+    map.set(tokenBalanceKey(balance), BigInt(balance.uiTokenAmount.amount));
   }
   return map;
+}
+
+function previousTokenAmount(pre: Map<string, bigint>, balance: SolanaTokenBalance) {
+  return pre.get(tokenBalanceKey(balance)) ?? pre.get(tokenBalanceKey(balance, "")) ?? BigInt(0);
+}
+
+function allParsedInstructions(tx: SolanaTransaction) {
+  return [
+    ...(tx.transaction.message.instructions ?? []),
+    ...(tx.meta.innerInstructions ?? []).flatMap((group) => group.instructions ?? []),
+  ];
+}
+
+function stringInfo(info: Record<string, unknown>, key: string) {
+  const value = info[key];
+  return typeof value === "string" ? value : null;
+}
+
+function transferAmountAtomic(info: Record<string, unknown>) {
+  const tokenAmount = info.tokenAmount;
+  if (tokenAmount && typeof tokenAmount === "object" && "amount" in tokenAmount) {
+    const amount = (tokenAmount as { amount?: unknown }).amount;
+    return typeof amount === "string" && /^\d+$/.test(amount) ? BigInt(amount) : null;
+  }
+
+  const amount = info.amount;
+  return typeof amount === "string" && /^\d+$/.test(amount) ? BigInt(amount) : null;
+}
+
+function expectedTransferDestinations(tx: SolanaTransaction, order: PaymentOrderRecord) {
+  const destinations = new Set<string>();
+
+  for (const instruction of allParsedInstructions(tx)) {
+    const type = instruction.parsed?.type;
+    const info = instruction.parsed?.info;
+    if (!info || (type !== "transfer" && type !== "transferChecked")) {
+      continue;
+    }
+
+    const mint = stringInfo(info, "mint");
+    if (mint && mint !== order.tokenContractOrMint) {
+      continue;
+    }
+
+    if (transferAmountAtomic(info) !== order.expectedTransferAmountAtomic) {
+      continue;
+    }
+
+    const destination = stringInfo(info, "destination");
+    if (destination) {
+      destinations.add(destination);
+    }
+  }
+
+  return destinations;
 }
 
 export class SolanaUsdtVerifier implements PaymentVerifier {
@@ -104,6 +169,7 @@ export class SolanaUsdtVerifier implements PaymentVerifier {
       const pre = tokenBalanceMap(tx.meta.preTokenBalances);
       const receiverDeltas: bigint[] = [];
       const postBalances = tx.meta.postTokenBalances ?? [];
+      const transferDestinations = expectedTransferDestinations(tx, order);
 
       for (const postBalance of postBalances) {
         if (postBalance.mint !== order.tokenContractOrMint) {
@@ -112,14 +178,17 @@ export class SolanaUsdtVerifier implements PaymentVerifier {
 
         const accountKey = accountKeyAt(tx, postBalance.accountIndex);
         const matchesReceiver =
-          postBalance.owner === order.receiverAddress || accountKey === order.receiverAddress;
+          postBalance.owner === order.receiverAddress ||
+          accountKey === order.receiverAddress ||
+          Boolean(accountKey && transferDestinations.has(accountKey));
 
         if (!matchesReceiver) {
           continue;
         }
 
-        const key = `${postBalance.accountIndex}:${postBalance.mint}:${postBalance.owner ?? ""}`;
-        receiverDeltas.push(BigInt(postBalance.uiTokenAmount.amount) - (pre.get(key) ?? BigInt(0)));
+        receiverDeltas.push(
+          BigInt(postBalance.uiTokenAmount.amount) - previousTokenAmount(pre, postBalance),
+        );
       }
 
       const receivedAtomic = receiverDeltas.reduce((sum, value) => sum + value, BigInt(0));

@@ -114,6 +114,16 @@ test("server-renders checkout without wallet shortcut", async () => {
   assert.doesNotMatch(html, /Wallet/);
 });
 
+test("server-renders the manual transaction check page", async () => {
+  const response = await render("/manual-transaction-check");
+  assert.equal(response.status, 200);
+
+  const html = await response.text();
+  assert.match(html, /Manual transaction check/i);
+  assert.match(html, /Transaction hash/);
+  assert.match(html, /Check transaction/);
+});
+
 test("server-renders the about page", async () => {
   const response = await render("/about");
   assert.equal(response.status, 200);

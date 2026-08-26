@@ -173,6 +173,10 @@ class DevRepository implements Repository {
     return this.payments.get(publicId) ?? null;
   }
 
+  async findPaymentOrdersByTxHash(txHash: string) {
+    return [...this.payments.values()].filter((payment) => payment.txHash === txHash);
+  }
+
   async updateWaitingPaymentOrderNetwork(publicId: string, draft: PaymentOrderDraft) {
     const order = this.payments.get(publicId);
     if (!order || order.status !== "waiting" || order.txHash) {
