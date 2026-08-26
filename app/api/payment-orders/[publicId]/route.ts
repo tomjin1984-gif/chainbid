@@ -10,6 +10,7 @@ import { publicPaymentOrder, publicProject } from "@/lib/repository/serializers"
 import { createPaymentOrderDraftForPublicId } from "@/lib/payment/orders";
 import { createQrDataUrl } from "@/lib/payment/qr";
 import { buildPaymentPayload, warningForNetwork } from "@/lib/payment/uris";
+import { processPaymentOrder } from "@/lib/payment/worker";
 import { errorMessage, jsonError } from "@/lib/http";
 import { checkRateLimit, rateLimitKey } from "@/lib/security/rate-limit";
 
@@ -42,6 +43,10 @@ async function paymentOrderPayload(order: PaymentOrderRecord, project: ProjectRe
   };
 }
 
+function shouldRefreshVerification(order: PaymentOrderRecord) {
+  return Boolean(order.txHash) && (order.status === "detected" || order.status === "confirming");
+}
+
 export async function GET(
   request: Request,
   context: { params: Promise<{ publicId: string }> | { publicId: string } },
@@ -64,8 +69,17 @@ export async function GET(
       return jsonError("Payment order was not found.", 404);
     }
 
-    const project = await repository.getProjectById(order.projectId);
-    return Response.json(await paymentOrderPayload(order, project));
+    let currentOrder = order;
+    if (shouldRefreshVerification(order)) {
+      await processPaymentOrder({
+        order,
+        repository,
+      });
+      currentOrder = (await repository.getPaymentOrder(params.publicId)) ?? order;
+    }
+
+    const project = await repository.getProjectById(currentOrder.projectId);
+    return Response.json(await paymentOrderPayload(currentOrder, project));
   } catch (error) {
     return jsonError(errorMessage(error), 500);
   }

@@ -170,6 +170,78 @@ test("provider lookup failures do not lock a waiting payment order to a hash", a
   assert.equal(switched?.network, "ethereum");
 });
 
+test("rechecking a confirming payment can credit it after finality", async () => {
+  const project = await devRepository.getProjectBySlug("arbitrum");
+  assert.ok(project);
+  const draft = createPaymentOrderDraft({
+    projectId: project.id,
+    network: "ethereum",
+    bidCreditUsdt: BigInt(12),
+    now: new Date("2026-08-23T00:20:00.000Z"),
+  });
+  const order = await devRepository.createPaymentOrder(draft);
+
+  const unconfirmedVerifier: PaymentVerifier = {
+    network: "ethereum",
+    async verifyPayment(paymentOrder: PaymentOrderRecord) {
+      return {
+        status: "unconfirmed",
+        network: "ethereum",
+        txHash: "0xeventuallyconfirmed",
+        tokenContractOrMint: paymentOrder.tokenContractOrMint,
+        senderAddress: "0xsender",
+        receiverAddress: paymentOrder.receiverAddress,
+        amountAtomic: paymentOrder.expectedTransferAmountAtomic,
+        blockNumberOrSlot: "0x1",
+        confirmations: 39,
+        rawReference: "0xeventuallyconfirmed",
+        failureReason: "Transaction exists but has not reached the configured finality policy.",
+      };
+    },
+  };
+
+  await processPaymentOrder({
+    order,
+    repository: devRepository,
+    verifier: unconfirmedVerifier,
+    txHashHint: "0xeventuallyconfirmed",
+  });
+
+  const confirming = await devRepository.getPaymentOrder(order.publicId);
+  assert.equal(confirming?.status, "confirming");
+  assert.equal(confirming?.confirmations, 39);
+
+  const confirmedVerifier: PaymentVerifier = {
+    network: "ethereum",
+    async verifyPayment(paymentOrder: PaymentOrderRecord) {
+      return {
+        status: "confirmed",
+        network: "ethereum",
+        txHash: "0xeventuallyconfirmed",
+        tokenContractOrMint: paymentOrder.tokenContractOrMint,
+        senderAddress: "0xsender",
+        receiverAddress: paymentOrder.receiverAddress,
+        amountAtomic: paymentOrder.expectedTransferAmountAtomic,
+        blockNumberOrSlot: "0x1",
+        confirmations: 64,
+        rawReference: "0xeventuallyconfirmed",
+        failureReason: null,
+      };
+    },
+  };
+
+  assert.ok(confirming);
+  const result = await processPaymentOrder({
+    order: confirming,
+    repository: devRepository,
+    verifier: confirmedVerifier,
+  });
+  assert.equal(result.credited, true);
+
+  const credited = await devRepository.getPaymentOrder(order.publicId);
+  assert.equal(credited?.status, "credited");
+});
+
 test("maps underpaid and overpaid verifier results without crediting", async () => {
   const project = await devRepository.getProjectBySlug("bittensor");
   assert.ok(project);

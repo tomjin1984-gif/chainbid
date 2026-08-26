@@ -86,7 +86,9 @@ export function CheckoutClient({
       return "Payment confirmed";
     }
     if (order.status === "confirming") {
-      return `Confirming on ${network.label}`;
+      return order.confirmations
+        ? `Confirming on ${network.label} (${order.confirmations})`
+        : `Confirming on ${network.label}`;
     }
     if (order.status === "detected") {
       return "Payment detected";
