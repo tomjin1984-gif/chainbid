@@ -316,6 +316,46 @@ html[data-theme="light"] textarea::placeholder {
   color: #697682;
 }
 
+html[data-theme="light"] .outbid-submit-row label,
+html[data-theme="light"] .category-dropdown-trigger {
+  border-color: rgba(0, 184, 137, 0.2);
+  background:
+    linear-gradient(180deg, rgba(0, 184, 137, 0.08), rgba(255, 255, 255, 0.84)),
+    rgba(255, 255, 255, 0.78);
+  color: #101820;
+}
+
+html[data-theme="light"] .category-dropdown-trigger svg {
+  color: #0b8f70;
+}
+
+html[data-theme="light"] .dropdown-chevron {
+  color: #53616d;
+}
+
+html[data-theme="light"] .category-dropdown-card {
+  border-color: rgba(0, 184, 137, 0.22);
+  background:
+    linear-gradient(180deg, rgba(0, 184, 137, 0.1), transparent 46%),
+    rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 48px rgba(16, 24, 32, 0.14), 0 0 0 1px rgba(255, 255, 255, 0.7) inset;
+}
+
+html[data-theme="light"] .category-dropdown-option {
+  color: #394754;
+}
+
+html[data-theme="light"] .category-dropdown-option:hover,
+html[data-theme="light"] .category-dropdown-option.active {
+  border-color: rgba(0, 184, 137, 0.22);
+  background: rgba(0, 184, 137, 0.1);
+  color: #101820;
+}
+
+html[data-theme="light"] .category-dropdown-option.active {
+  color: #087c61;
+}
+
 html[data-theme="light"] .network-option {
   border-color: rgba(12, 24, 32, 0.16);
   background: rgba(255, 255, 255, 0.72);

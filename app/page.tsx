@@ -393,7 +393,24 @@ export default async function Home({
     repository.getLeaderboard(),
     repository.getActivity(8),
   ]);
-  const topBid = claimTopBid(projects);
+  const categoryClaimAmounts = categories.reduce<Record<string, string>>(
+    (amounts, category) => {
+      const categoryProjects =
+        category === "All"
+          ? allProjects
+          : allProjects.filter((project) => project.category === category);
+
+      amounts[category] = claimTopBid(categoryProjects).toString();
+      return amounts;
+    },
+    {},
+  );
+  const formDefaultCategory =
+    activeCategory !== "All" && categories.includes(activeCategory as (typeof categories)[number])
+      ? activeCategory
+      : "DeFi";
+  const initialClaimAmount =
+    categoryClaimAmounts[formDefaultCategory] ?? claimTopBid(projects).toString();
   const totalSiteBidUsdt = allProjects.reduce(
     (total, project) => total + project.totalBidUsdt,
     BigInt(0),
@@ -417,9 +434,10 @@ export default async function Home({
       <section className="outbid-hero">
         <header className="outbid-title-block">
           <ClaimAmountControl
-            key={`${activeCategory}-${topBid.toString()}`}
-            initialAmount={topBid.toString()}
+            key={`${formDefaultCategory}-${initialClaimAmount}`}
+            initialAmount={initialClaimAmount}
             formId="outbid-submit-form"
+            categoryAmounts={categoryClaimAmounts}
           />
           <p>
             <span>New spots start at 5 USDT.</span> Paying less than the #1
@@ -429,7 +447,7 @@ export default async function Home({
 
         <OutbidQuickForm
           formId="outbid-submit-form"
-          defaultCategory="DeFi"
+          defaultCategory={formDefaultCategory}
           network={defaultNetwork}
         />
 

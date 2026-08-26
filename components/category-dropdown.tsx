@@ -8,8 +8,10 @@ const categoryOptions = categories.filter((category) => category !== "All");
 
 export function CategoryDropdown({
   defaultValue = "DeFi",
+  onChange,
 }: {
   defaultValue?: string;
+  onChange?: (category: string) => void;
 }) {
   const [selected, setSelected] = useState(defaultValue);
   const [open, setOpen] = useState(false);
@@ -64,6 +66,7 @@ export function CategoryDropdown({
                 key={category}
                 onClick={() => {
                   setSelected(category);
+                  onChange?.(category);
                   setOpen(false);
                 }}
                 role="option"

@@ -6,6 +6,8 @@ import type { FormEvent } from "react";
 import { CategoryDropdown } from "@/components/category-dropdown";
 import type { SupportedNetwork } from "@/lib/domain/types";
 
+const categoryChangeEvent = "chainbid:category-change";
+
 export function OutbidQuickForm({
   formId,
   defaultCategory = "DeFi",
@@ -70,6 +72,14 @@ export function OutbidQuickForm({
     }
   }
 
+  function handleCategoryChange(category: string) {
+    window.dispatchEvent(
+      new CustomEvent(categoryChangeEvent, {
+        detail: { category },
+      }),
+    );
+  }
+
   return (
     <>
       <form id={formId} className="outbid-submit-row" action="/submit" method="get" onSubmit={submit}>
@@ -78,7 +88,7 @@ export function OutbidQuickForm({
           <span className="sr-only">Project URL</span>
           <input name="url" placeholder="https://example.xyz" />
         </label>
-        <CategoryDropdown defaultValue={defaultCategory} />
+        <CategoryDropdown defaultValue={defaultCategory} onChange={handleCategoryChange} />
         <button className="button outbid-submit-button" type="submit" disabled={busy}>
           {busy ? "Creating" : "Outbid"}
           {busy ? <CheckCircle2 size={18} /> : <ArrowRight size={18} />}

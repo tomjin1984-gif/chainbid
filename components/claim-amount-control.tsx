@@ -1,12 +1,13 @@
 "use client";
 
 import { Minus, Plus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MAX_BID_USDT, MIN_BID_USDT } from "@/lib/domain/money";
 
 const minBid = Number(MIN_BID_USDT);
 const maxBid = Number(MAX_BID_USDT);
 const usdtFormatter = new Intl.NumberFormat("en-US");
+const categoryChangeEvent = "chainbid:category-change";
 
 function normalizeAmount(value: string) {
   const parsed = Number.parseInt(value, 10);
@@ -20,12 +21,37 @@ function normalizeAmount(value: string) {
 export function ClaimAmountControl({
   initialAmount,
   formId,
+  categoryAmounts = {},
 }: {
   initialAmount: string;
   formId: string;
+  categoryAmounts?: Record<string, string>;
 }) {
   const [amount, setAmount] = useState(() => normalizeAmount(initialAmount));
   const formattedAmount = useMemo(() => usdtFormatter.format(amount), [amount]);
+
+  useEffect(() => {
+    setAmount(normalizeAmount(initialAmount));
+  }, [initialAmount]);
+
+  useEffect(() => {
+    function handleCategoryChange(event: Event) {
+      const category = (event as CustomEvent<{ category?: string }>).detail?.category;
+      const nextAmount = category ? categoryAmounts[category] : null;
+
+      if (!nextAmount) {
+        return;
+      }
+
+      setAmount(normalizeAmount(nextAmount));
+    }
+
+    window.addEventListener(categoryChangeEvent, handleCategoryChange);
+
+    return () => {
+      window.removeEventListener(categoryChangeEvent, handleCategoryChange);
+    };
+  }, [categoryAmounts]);
 
   function updateAmount(delta: number) {
     setAmount((current) => Math.min(maxBid, Math.max(minBid, current + delta)));
