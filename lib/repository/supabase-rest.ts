@@ -42,7 +42,16 @@ async function supabaseFetch<T>(path: string, init?: RequestInit): Promise<T> {
     return undefined as T;
   }
 
-  return (await response.json()) as T;
+  const body = await response.text();
+  if (!body.trim()) {
+    return undefined as T;
+  }
+
+  try {
+    return JSON.parse(body) as T;
+  } catch {
+    throw new Error(`Supabase returned unreadable JSON: ${body.slice(0, 300)}`);
+  }
 }
 
 export class SupabaseRestRepository implements Repository {

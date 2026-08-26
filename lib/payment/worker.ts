@@ -5,7 +5,7 @@ import { createPaymentVerifier } from "./verifiers";
 
 const OPEN_STATUSES: PaymentOrderStatus[] = ["waiting", "detected", "confirming"];
 
-function statusFromVerification(
+export function statusFromVerification(
   order: PaymentOrderRecord,
   result: VerificationResult,
 ): PaymentOrderStatus {
