@@ -9,6 +9,7 @@ import type {
 } from "@/lib/domain/types";
 import type { Repository } from "@/lib/repository/types";
 import { createPaymentOrderDraftForPublicId } from "./orders";
+import { networksForTransactionHash } from "./network-detection";
 import type { PaymentOrderDraft, PaymentVerifier, VerificationResult } from "./types";
 import { createPaymentVerifier } from "./verifiers";
 import { processPaymentOrder, statusFromVerification } from "./worker";
@@ -18,6 +19,11 @@ export const MANUAL_CHECK_OPEN_STATUSES: PaymentOrderStatus[] = [
   "detected",
   "confirming",
   "confirmed",
+  "failed",
+  "underpaid",
+  "overpaid",
+  "manual_review",
+  "expired",
 ];
 
 interface ManualCheckCandidate {
@@ -45,14 +51,17 @@ function isMatchingPayment(result: VerificationResult) {
   );
 }
 
-function availableNetworks(currentNetwork: SupportedNetwork) {
-  return [
+function availableNetworks(currentNetwork: SupportedNetwork, txHash: string) {
+  const compatibleNetworks = new Set(networksForTransactionHash(txHash));
+  const networks = [
     currentNetwork,
     ...getNetworkConfigs()
       .filter(isNetworkAvailableForCheckout)
       .map((network) => network.network)
       .filter((network) => network !== currentNetwork),
   ];
+
+  return networks.filter((network) => compatibleNetworks.has(network));
 }
 
 function candidateForNetwork(order: PaymentOrderRecord, network: SupportedNetwork) {
@@ -87,7 +96,7 @@ export async function findMatchingManualCheckCandidate(args: {
   txHash: string;
   verifiers?: Partial<Record<SupportedNetwork, PaymentVerifier>>;
 }): Promise<ManualCheckCandidate | null> {
-  for (const network of availableNetworks(args.order.network)) {
+  for (const network of availableNetworks(args.order.network, args.txHash)) {
     const candidate = candidateForNetwork(args.order, network);
     const verifier = args.verifiers?.[network] ?? createPaymentVerifier(network);
     const result = await verifier.verifyPayment(candidate.order, args.txHash);

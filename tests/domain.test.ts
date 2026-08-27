@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { z } from "zod";
+import { getNetworkConfig } from "../lib/config/networks";
 import { parseWholeUsdt, createUniqueTransferAmountAtomic, formatAtomicAmount } from "../lib/domain/money";
 import { claimTopBid, sortProjectsForLeaderboard, targetToPassRank } from "../lib/domain/ranking";
 import { normalizeProjectUrl } from "../lib/domain/url";
@@ -8,6 +9,7 @@ import { errorMessage } from "../lib/http";
 import { assertSafeMetadataUrl } from "../lib/security/ssrf";
 import { createPaymentOrderDraft, createPaymentOrderDraftForPublicId } from "../lib/payment/orders";
 import { attachManualCheckToOrder } from "../lib/payment/manual-check";
+import { networksForTransactionHash } from "../lib/payment/network-detection";
 import { processPaymentOrder } from "../lib/payment/worker";
 import { SolanaUsdtVerifier } from "../lib/payment/verifiers/solana";
 import { devRepository } from "../lib/repository/dev-store";
@@ -45,6 +47,71 @@ test("creates exact unique transfer amounts without changing bid credit", () => 
 
   assert.equal(atomic > BigInt(100_000_000), true);
   assert.match(formatAtomicAmount(atomic, 6), /^100\.[0-9]+$/);
+});
+
+test("detects likely payment network from transaction hash shape", () => {
+  assert.deepEqual(
+    networksForTransactionHash("0xc213f2fb294960a8b15a448c6c4fa77beabb2f55b38f8c7f8d77a1b8e9e9e9e9"),
+    ["ethereum", "bsc"],
+  );
+  assert.deepEqual(
+    networksForTransactionHash("806856e09b7fcb70939fe8d315f0b89f0338c17f6ab615d3f109364996286ec3"),
+    ["tron"],
+  );
+  assert.deepEqual(
+    networksForTransactionHash("5B6HtpmpqsnPrKtP9QQ7vpHSkm4poW88TfVj1DtfnW3w7V9c9m3jijyMkamqsMmjfSaZYv8rsdW6kLP8KSnJ4v42"),
+    ["solana"],
+  );
+});
+
+test("keeps safe numeric payment defaults in production", () => {
+  const originalAppEnv = process.env.APP_ENV;
+  const originalSolanaDecimals = process.env.USDT_DECIMALS_SOLANA;
+  const originalSolanaConfirmations = process.env.SOLANA_MIN_CONFIRMATIONS;
+  const originalBscDecimals = process.env.USDT_DECIMALS_BSC;
+  const originalBscConfirmations = process.env.BSC_CONFIRMATIONS;
+
+  process.env.APP_ENV = "production";
+  delete process.env.USDT_DECIMALS_SOLANA;
+  delete process.env.SOLANA_MIN_CONFIRMATIONS;
+  delete process.env.USDT_DECIMALS_BSC;
+  delete process.env.BSC_CONFIRMATIONS;
+
+  try {
+    const solana = getNetworkConfig("solana");
+    const bsc = getNetworkConfig("bsc");
+
+    assert.equal(solana.decimals, 6);
+    assert.equal(solana.finality.confirmations, 32);
+    assert.equal(bsc.decimals, 18);
+    assert.equal(bsc.finality.confirmations, 45);
+  } finally {
+    if (originalAppEnv === undefined) {
+      delete process.env.APP_ENV;
+    } else {
+      process.env.APP_ENV = originalAppEnv;
+    }
+    if (originalSolanaDecimals === undefined) {
+      delete process.env.USDT_DECIMALS_SOLANA;
+    } else {
+      process.env.USDT_DECIMALS_SOLANA = originalSolanaDecimals;
+    }
+    if (originalSolanaConfirmations === undefined) {
+      delete process.env.SOLANA_MIN_CONFIRMATIONS;
+    } else {
+      process.env.SOLANA_MIN_CONFIRMATIONS = originalSolanaConfirmations;
+    }
+    if (originalBscDecimals === undefined) {
+      delete process.env.USDT_DECIMALS_BSC;
+    } else {
+      process.env.USDT_DECIMALS_BSC = originalBscDecimals;
+    }
+    if (originalBscConfirmations === undefined) {
+      delete process.env.BSC_CONFIRMATIONS;
+    } else {
+      process.env.BSC_CONFIRMATIONS = originalBscConfirmations;
+    }
+  }
 });
 
 test("normalizes listing URLs and preserves meaningful paths", () => {
@@ -326,9 +393,126 @@ test("solana verifier matches an SPL destination token account", async () => {
   })) as typeof fetch;
 
   try {
-    const result = await new SolanaUsdtVerifier().verifyPayment(order, "solana_signature");
+    const result = await new SolanaUsdtVerifier().verifyPayment(order, "solana_signature_finalized");
     assert.equal(result.status, "confirmed");
     assert.equal(result.amountAtomic, order.expectedTransferAmountAtomic);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalRpc === undefined) {
+      delete process.env.SOLANA_RPC_URL;
+    } else {
+      process.env.SOLANA_RPC_URL = originalRpc;
+    }
+  }
+});
+
+test("solana verifier reports confirmed transactions as waiting for finality", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalRpc = process.env.SOLANA_RPC_URL;
+  const draft = createPaymentOrderDraft({
+    projectId: "proj_solana_confirmed",
+    network: "solana",
+    bidCreditUsdt: BigInt(5),
+  });
+  const order: PaymentOrderRecord = {
+    id: "pay_solana_confirmed",
+    publicId: draft.publicId,
+    projectId: draft.projectId,
+    bidId: null,
+    network: draft.network,
+    receiverAddress: draft.receiverAddress,
+    tokenContractOrMint: draft.tokenContractOrMint,
+    bidCreditUsdt: draft.bidCreditUsdt,
+    expectedTransferAmountAtomic: draft.expectedTransferAmountAtomic,
+    expectedTransferAmountDisplay: draft.expectedTransferAmountDisplay,
+    expectedSenderAddress: null,
+    status: "waiting",
+    txHash: null,
+    blockNumberOrSlot: null,
+    confirmations: 0,
+    createdAt: new Date().toISOString(),
+    expiresAt: draft.expiresAt,
+    detectedAt: null,
+    confirmedAt: null,
+    creditedAt: null,
+    failureReason: null,
+  };
+  const commitments: string[] = [];
+
+  process.env.SOLANA_RPC_URL = "https://solana.test";
+  globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+    const body = JSON.parse(String(init?.body ?? "{}")) as {
+      params?: Array<{ commitment?: string } | string>;
+    };
+    const commitment = typeof body.params?.[1] === "object" ? body.params[1].commitment : null;
+    if (commitment) {
+      commitments.push(commitment);
+    }
+
+    if (commitment === "finalized") {
+      return Response.json({
+        jsonrpc: "2.0",
+        id: 1,
+        result: null,
+      });
+    }
+
+    return Response.json({
+      jsonrpc: "2.0",
+      id: 1,
+      result: {
+        slot: 12346,
+        transaction: {
+          message: {
+            accountKeys: ["payer", "receiverTokenAccount"],
+            instructions: [
+              {
+                parsed: {
+                  type: "transferChecked",
+                  info: {
+                    mint: order.tokenContractOrMint,
+                    source: "payerTokenAccount",
+                    destination: "receiverTokenAccount",
+                    tokenAmount: {
+                      amount: order.expectedTransferAmountAtomic.toString(),
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        },
+        meta: {
+          err: null,
+          preTokenBalances: [
+            {
+              accountIndex: 1,
+              mint: order.tokenContractOrMint,
+              owner: order.receiverAddress,
+              uiTokenAmount: { amount: "0", decimals: 6 },
+            },
+          ],
+          postTokenBalances: [
+            {
+              accountIndex: 1,
+              mint: order.tokenContractOrMint,
+              owner: order.receiverAddress,
+              uiTokenAmount: {
+                amount: order.expectedTransferAmountAtomic.toString(),
+                decimals: 6,
+              },
+            },
+          ],
+        },
+      },
+    });
+  }) as typeof fetch;
+
+  try {
+    const result = await new SolanaUsdtVerifier().verifyPayment(order, "solana_signature_confirmed");
+    assert.equal(result.status, "unconfirmed");
+    assert.equal(result.senderAddress, "payerTokenAccount");
+    assert.deepEqual(commitments, ["finalized", "confirmed"]);
   } finally {
     globalThis.fetch = originalFetch;
     if (originalRpc === undefined) {

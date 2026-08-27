@@ -6,6 +6,7 @@ import {
 import type { PaymentOrderRecord, SupportedNetwork } from "@/lib/domain/types";
 import { getRepository } from "@/lib/repository";
 import { createPaymentOrderDraftForPublicId } from "@/lib/payment/orders";
+import { networksForTransactionHash } from "@/lib/payment/network-detection";
 import { createPaymentVerifier } from "@/lib/payment/verifiers";
 import { processPaymentOrder, statusFromVerification } from "@/lib/payment/worker";
 import type { VerificationResult } from "@/lib/payment/types";
@@ -33,11 +34,12 @@ function isRetryableNetworkMiss(result: VerificationResult | null | undefined) {
   return result?.status === "not_found" || result?.status === "provider_error";
 }
 
-function alternateNetworks(currentNetwork: SupportedNetwork) {
+function alternateNetworks(currentNetwork: SupportedNetwork, txHash: string) {
+  const compatibleNetworks = new Set(networksForTransactionHash(txHash));
   return getNetworkConfigs()
     .filter(isNetworkAvailableForCheckout)
     .map((network) => network.network)
-    .filter((network) => network !== currentNetwork);
+    .filter((network) => network !== currentNetwork && compatibleNetworks.has(network));
 }
 
 async function processVerificationOnDetectedNetwork(args: {
@@ -45,17 +47,24 @@ async function processVerificationOnDetectedNetwork(args: {
   repository: Repository;
   txHash: string;
 }) {
-  const firstAttempt = await processPaymentOrder({
-    order: args.order,
-    repository: args.repository,
-    txHashHint: args.txHash,
-  });
+  const compatibleNetworks = networksForTransactionHash(args.txHash);
+  const shouldTryCurrentNetwork = compatibleNetworks.includes(args.order.network);
+  const firstAttempt = shouldTryCurrentNetwork
+    ? await processPaymentOrder({
+        order: args.order,
+        repository: args.repository,
+        txHashHint: args.txHash,
+      })
+    : { credited: false as const, result: null };
 
-  if (!isRetryableNetworkMiss(firstAttempt.result) || args.order.status !== "waiting") {
+  if (
+    args.order.status !== "waiting" ||
+    (shouldTryCurrentNetwork && !isRetryableNetworkMiss(firstAttempt.result))
+  ) {
     return firstAttempt;
   }
 
-  for (const network of alternateNetworks(args.order.network)) {
+  for (const network of alternateNetworks(args.order.network, args.txHash)) {
     const draft = createPaymentOrderDraftForPublicId({
       publicId: args.order.publicId,
       projectId: args.order.projectId,

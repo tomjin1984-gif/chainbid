@@ -190,7 +190,7 @@ export class SupabaseRestRepository implements Repository {
 
   async listOpenPaymentOrders(args: { statuses: PaymentOrderStatus[]; limit: number }) {
     const rows = await supabaseFetch<Row[]>(
-      `/rest/v1/payment_orders?select=*&status=in.(${args.statuses.join(",")})&order=created_at.asc&limit=${args.limit}`,
+      `/rest/v1/payment_orders?select=*&status=in.(${args.statuses.join(",")})&order=created_at.desc&limit=${args.limit}`,
       { method: "GET" },
     );
     return rows.map(paymentOrderFromRow);

@@ -2,7 +2,9 @@ import { getNetworkConfig } from "@/lib/config/networks";
 import type { PaymentOrderRecord } from "@/lib/domain/types";
 import { requestJsonRpc } from "../rpc";
 import type { PaymentVerifier } from "../types";
-import { ensureTxHint, isExpired, verificationResult } from "./base";
+import { ensureTxHint, verificationResult } from "./base";
+
+type SolanaCommitment = "confirmed" | "finalized";
 
 interface SolanaTokenBalance {
   accountIndex: number;
@@ -12,6 +14,12 @@ interface SolanaTokenBalance {
     amount: string;
     decimals: number;
   };
+}
+
+interface SolanaTransferInstruction {
+  sourceAddress: string | null;
+  destinationAddress: string | null;
+  amountAtomic: bigint;
 }
 
 interface SolanaParsedInstruction {
@@ -36,6 +44,15 @@ interface SolanaTransaction {
     innerInstructions?: Array<{ instructions?: SolanaParsedInstruction[] }>;
   };
 }
+
+interface SolanaTokenAccountsResponse {
+  value?: Array<{
+    pubkey?: string;
+  }>;
+}
+
+const transactionCache = new Map<string, Promise<SolanaTransaction | null>>();
+const tokenAccountsCache = new Map<string, Promise<Set<string>>>();
 
 function accountKeyAt(tx: SolanaTransaction, index: number) {
   const key = tx.transaction.message.accountKeys[index];
@@ -81,8 +98,11 @@ function transferAmountAtomic(info: Record<string, unknown>) {
   return typeof amount === "string" && /^\d+$/.test(amount) ? BigInt(amount) : null;
 }
 
-function expectedTransferDestinations(tx: SolanaTransaction, order: PaymentOrderRecord) {
-  const destinations = new Set<string>();
+function matchingTransferInstructions(
+  tx: SolanaTransaction,
+  order: PaymentOrderRecord,
+): SolanaTransferInstruction[] {
+  const transfers: SolanaTransferInstruction[] = [];
 
   for (const instruction of allParsedInstructions(tx)) {
     const type = instruction.parsed?.type;
@@ -100,9 +120,22 @@ function expectedTransferDestinations(tx: SolanaTransaction, order: PaymentOrder
       continue;
     }
 
-    const destination = stringInfo(info, "destination");
-    if (destination) {
-      destinations.add(destination);
+    transfers.push({
+      sourceAddress: stringInfo(info, "source") ?? stringInfo(info, "authority"),
+      destinationAddress: stringInfo(info, "destination"),
+      amountAtomic: order.expectedTransferAmountAtomic,
+    });
+  }
+
+  return transfers;
+}
+
+function expectedTransferDestinations(tx: SolanaTransaction, order: PaymentOrderRecord) {
+  const destinations = new Set<string>();
+
+  for (const transfer of matchingTransferInstructions(tx, order)) {
+    if (transfer.destinationAddress) {
+      destinations.add(transfer.destinationAddress);
     }
   }
 
@@ -111,6 +144,77 @@ function expectedTransferDestinations(tx: SolanaTransaction, order: PaymentOrder
 
 export class SolanaUsdtVerifier implements PaymentVerifier {
   readonly network = "solana" as const;
+
+  private getTransaction(rpcUrl: string, txHash: string, commitment: SolanaCommitment) {
+    const cacheKey = `${rpcUrl}:${commitment}:${txHash}`;
+    const cached = transactionCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    if (transactionCache.size > 100) {
+      transactionCache.clear();
+    }
+
+    const request = requestJsonRpc<SolanaTransaction | null>(
+      rpcUrl,
+      "getTransaction",
+      [
+        txHash,
+        {
+          commitment,
+          encoding: "jsonParsed",
+          maxSupportedTransactionVersion: 0,
+        },
+      ],
+      {
+        timeoutMs: 4_000,
+        retries: 0,
+      },
+    );
+    transactionCache.set(cacheKey, request);
+    return request;
+  }
+
+  private async getReceiverTokenAccounts(
+    rpcUrl: string,
+    ownerAddress: string,
+    mint: string,
+    commitment: SolanaCommitment,
+  ) {
+    const cacheKey = `${rpcUrl}:${commitment}:${ownerAddress}:${mint}`;
+    const cached = tokenAccountsCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    if (tokenAccountsCache.size > 100) {
+      tokenAccountsCache.clear();
+    }
+
+    const request = requestJsonRpc<SolanaTokenAccountsResponse>(
+      rpcUrl,
+      "getTokenAccountsByOwner",
+      [
+        ownerAddress,
+        { mint },
+        {
+          commitment,
+          encoding: "jsonParsed",
+        },
+      ],
+      {
+        timeoutMs: 4_000,
+        retries: 0,
+      },
+    )
+      .then((response) => new Set((response.value ?? []).flatMap((account) => (
+        account.pubkey ? [account.pubkey] : []
+      ))))
+      .catch(() => new Set<string>());
+    tokenAccountsCache.set(cacheKey, request);
+    return request;
+  }
 
   async verifyPayment(order: PaymentOrderRecord, txHashHint?: string) {
     const config = getNetworkConfig("solana");
@@ -133,18 +237,13 @@ export class SolanaUsdtVerifier implements PaymentVerifier {
     }
 
     try {
-      const tx = await requestJsonRpc<SolanaTransaction | null>(
-        config.rpcUrl,
-        "getTransaction",
-        [
-          txHash,
-          {
-            commitment: "finalized",
-            encoding: "jsonParsed",
-            maxSupportedTransactionVersion: 0,
-          },
-        ],
-      );
+      let finalized = true;
+      let tx = await this.getTransaction(config.rpcUrl, txHash, "finalized");
+
+      if (!tx) {
+        finalized = false;
+        tx = await this.getTransaction(config.rpcUrl, txHash, "confirmed");
+      }
 
       if (!tx) {
         return verificationResult({
@@ -169,7 +268,16 @@ export class SolanaUsdtVerifier implements PaymentVerifier {
       const pre = tokenBalanceMap(tx.meta.preTokenBalances);
       const receiverDeltas: bigint[] = [];
       const postBalances = tx.meta.postTokenBalances ?? [];
+      const matchingTransfers = matchingTransferInstructions(tx, order);
       const transferDestinations = expectedTransferDestinations(tx, order);
+      const receiverTokenAccounts = await this.getReceiverTokenAccounts(
+        config.rpcUrl,
+        order.receiverAddress,
+        order.tokenContractOrMint,
+        finalized ? "finalized" : "confirmed",
+      );
+      const senderAddress =
+        matchingTransfers.find((transfer) => transfer.sourceAddress)?.sourceAddress ?? null;
 
       for (const postBalance of postBalances) {
         if (postBalance.mint !== order.tokenContractOrMint) {
@@ -180,6 +288,7 @@ export class SolanaUsdtVerifier implements PaymentVerifier {
         const matchesReceiver =
           postBalance.owner === order.receiverAddress ||
           accountKey === order.receiverAddress ||
+          Boolean(accountKey && receiverTokenAccounts.has(accountKey)) ||
           Boolean(accountKey && transferDestinations.has(accountKey));
 
         if (!matchesReceiver) {
@@ -191,7 +300,16 @@ export class SolanaUsdtVerifier implements PaymentVerifier {
         );
       }
 
-      const receivedAtomic = receiverDeltas.reduce((sum, value) => sum + value, BigInt(0));
+      let receivedAtomic = receiverDeltas.reduce((sum, value) => sum + value, BigInt(0));
+
+      if (receivedAtomic === BigInt(0)) {
+        receivedAtomic = matchingTransfers
+          .filter((transfer) => (
+            transfer.destinationAddress === order.receiverAddress ||
+            Boolean(transfer.destinationAddress && receiverTokenAccounts.has(transfer.destinationAddress))
+          ))
+          .reduce((sum, transfer) => sum + transfer.amountAtomic, BigInt(0));
+      }
 
       if (receivedAtomic === BigInt(0)) {
         return verificationResult({
@@ -212,6 +330,7 @@ export class SolanaUsdtVerifier implements PaymentVerifier {
           network: "solana",
           txHash,
           tokenContractOrMint: order.tokenContractOrMint,
+          senderAddress,
           receiverAddress: order.receiverAddress,
           amountAtomic: receivedAtomic,
           blockNumberOrSlot: tx.slot.toString(),
@@ -220,17 +339,18 @@ export class SolanaUsdtVerifier implements PaymentVerifier {
         });
       }
 
-      if (isExpired(order)) {
+      if (!finalized) {
         return verificationResult({
-          status: "manual_review",
+          status: "unconfirmed",
           network: "solana",
           txHash,
           tokenContractOrMint: order.tokenContractOrMint,
+          senderAddress,
           receiverAddress: order.receiverAddress,
           amountAtomic: receivedAtomic,
           blockNumberOrSlot: tx.slot.toString(),
           rawReference: txHash,
-          failureReason: "Matching transaction arrived after the payment window expired.",
+          failureReason: "Transaction exists but has not reached finalized Solana commitment yet.",
         });
       }
 
@@ -239,6 +359,7 @@ export class SolanaUsdtVerifier implements PaymentVerifier {
         network: "solana",
         txHash,
         tokenContractOrMint: order.tokenContractOrMint,
+        senderAddress,
         receiverAddress: order.receiverAddress,
         amountAtomic: receivedAtomic,
         blockNumberOrSlot: tx.slot.toString(),

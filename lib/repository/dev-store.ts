@@ -203,6 +203,7 @@ class DevRepository implements Repository {
   async listOpenPaymentOrders(args: { statuses: PaymentOrderStatus[]; limit: number }) {
     return [...this.payments.values()]
       .filter((payment) => args.statuses.includes(payment.status))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, args.limit);
   }
 

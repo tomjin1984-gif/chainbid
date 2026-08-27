@@ -2,7 +2,7 @@ import { getNetworkConfig } from "@/lib/config/networks";
 import type { PaymentOrderRecord, SupportedNetwork } from "@/lib/domain/types";
 import { requestJsonRpc } from "../rpc";
 import type { PaymentVerifier } from "../types";
-import { ensureTxHint, isExpired, verificationResult } from "./base";
+import { ensureTxHint, verificationResult } from "./base";
 
 const TRANSFER_TOPIC =
   "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
@@ -164,21 +164,6 @@ export class EvmUsdtVerifier implements PaymentVerifier {
           blockNumberOrSlot: receipt.blockNumber,
           rawReference: receipt.transactionHash,
           failureReason: "Transfer amount did not match the unique expected amount.",
-        });
-      }
-
-      if (isExpired(order)) {
-        return verificationResult({
-          status: "manual_review",
-          network: this.network,
-          txHash,
-          tokenContractOrMint: order.tokenContractOrMint,
-          senderAddress: sender,
-          receiverAddress: order.receiverAddress,
-          amountAtomic,
-          blockNumberOrSlot: receipt.blockNumber,
-          rawReference: receipt.transactionHash,
-          failureReason: "Matching transaction arrived after the payment window expired.",
         });
       }
 

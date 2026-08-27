@@ -3,7 +3,7 @@ import { getNetworkConfig } from "@/lib/config/networks";
 import type { PaymentOrderRecord } from "@/lib/domain/types";
 import { requestJson } from "../rpc";
 import type { PaymentVerifier } from "../types";
-import { ensureTxHint, isExpired, verificationResult } from "./base";
+import { ensureTxHint, verificationResult } from "./base";
 
 const TRON_TRANSFER_TOPIC =
   "ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
@@ -153,21 +153,6 @@ export class TronUsdtVerifier implements PaymentVerifier {
           blockNumberOrSlot: info.blockNumber?.toString() ?? null,
           rawReference: info.id,
           failureReason: "Transfer amount did not match the unique expected amount.",
-        });
-      }
-
-      if (isExpired(order)) {
-        return verificationResult({
-          status: "manual_review",
-          network: "tron",
-          txHash,
-          tokenContractOrMint: order.tokenContractOrMint,
-          senderAddress: transfer.topics?.[1] ?? null,
-          receiverAddress: order.receiverAddress,
-          amountAtomic,
-          blockNumberOrSlot: info.blockNumber?.toString() ?? null,
-          rawReference: info.id,
-          failureReason: "Matching transaction arrived after the payment window expired.",
         });
       }
 

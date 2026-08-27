@@ -40,6 +40,31 @@ const DEFAULT_USDT = {
   solana: "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
 };
 
+function readConfiguredEnv(names: string[]) {
+  for (const name of names) {
+    const value = process.env[name]?.trim();
+    if (value) {
+      return value;
+    }
+  }
+
+  return "";
+}
+
+function readNetworkEnv(names: string[], fallback: string, production: boolean) {
+  return readConfiguredEnv(names) || (production ? "" : fallback);
+}
+
+function readNumberEnv(names: string[], fallback: number) {
+  const raw = readConfiguredEnv(names);
+  if (!raw) {
+    return fallback;
+  }
+
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : fallback;
+}
+
 export const supportedNetworks: SupportedNetwork[] = [
   "tron",
   "ethereum",
@@ -67,17 +92,17 @@ export function getNetworkConfigs(): NetworkTokenConfig[] {
       label: "TRON",
       tokenStandard: "USDT TRC20",
       chainId: null,
-      receiverAddress: readEnv("USDT_RECEIVER_TRON", RECEIVERS.tron),
+      receiverAddress: readNetworkEnv(["USDT_RECEIVER_TRON"], RECEIVERS.tron, production),
       receiverEnv: "USDT_RECEIVER_TRON",
-      usdtContractOrMint: readEnv("USDT_CONTRACT_TRON", DEFAULT_USDT.tron),
+      usdtContractOrMint: readNetworkEnv(["USDT_CONTRACT_TRON"], DEFAULT_USDT.tron, production),
       tokenEnv: "USDT_CONTRACT_TRON",
-      decimals: Number(readEnv("USDT_DECIMALS_TRON", "6")),
+      decimals: readNumberEnv(["USDT_DECIMALS_TRON"], 6),
       rpcUrl: readEnv("TRON_RPC_URL"),
       rpcEnv: "TRON_RPC_URL",
       enabled: readBooleanEnv("PAYMENTS_TRON_ENABLED", !production),
       finality: {
         mode: "tron_solidity",
-        confirmations: Number(readEnv("TRON_CONFIRMATIONS", "27")),
+        confirmations: readNumberEnv(["TRON_CONFIRMATIONS"], 27),
         description:
           "Use TRON solidity/confirmed endpoints and a conservative block confirmation floor.",
       },
@@ -90,17 +115,17 @@ export function getNetworkConfigs(): NetworkTokenConfig[] {
       label: "Ethereum",
       tokenStandard: "USDT ERC20",
       chainId: 1,
-      receiverAddress: readEnv("USDT_RECEIVER_ETHEREUM", RECEIVERS.ethereum),
+      receiverAddress: readNetworkEnv(["USDT_RECEIVER_ETHEREUM"], RECEIVERS.ethereum, production),
       receiverEnv: "USDT_RECEIVER_ETHEREUM",
-      usdtContractOrMint: readEnv("USDT_CONTRACT_ETHEREUM", DEFAULT_USDT.ethereum),
+      usdtContractOrMint: readNetworkEnv(["USDT_CONTRACT_ETHEREUM"], DEFAULT_USDT.ethereum, production),
       tokenEnv: "USDT_CONTRACT_ETHEREUM",
-      decimals: Number(readEnv("USDT_DECIMALS_ETHEREUM", "6")),
+      decimals: readNumberEnv(["USDT_DECIMALS_ETHEREUM"], 6),
       rpcUrl: readEnv("ETHEREUM_RPC_URL"),
       rpcEnv: "ETHEREUM_RPC_URL",
       enabled: readBooleanEnv("PAYMENTS_ETHEREUM_ENABLED", !production),
       finality: {
         mode: "finalized_tag",
-        confirmations: Number(readEnv("ETHEREUM_CONFIRMATIONS", "64")),
+        confirmations: readNumberEnv(["ETHEREUM_CONFIRMATIONS"], 64),
         description:
           "Prefer the finalized block tag; fall back to a conservative confirmation floor if the RPC does not expose finalized.",
       },
@@ -113,11 +138,11 @@ export function getNetworkConfigs(): NetworkTokenConfig[] {
       label: "BNB Smart Chain",
       tokenStandard: "USDT BEP20",
       chainId: 56,
-      receiverAddress: readEnv("USDT_RECEIVER_BSC", RECEIVERS.bsc),
+      receiverAddress: readNetworkEnv(["USDT_RECEIVER_BSC"], RECEIVERS.bsc, production),
       receiverEnv: "USDT_RECEIVER_BSC",
-      usdtContractOrMint: readEnv("USDT_CONTRACT_BSC", DEFAULT_USDT.bsc),
+      usdtContractOrMint: readNetworkEnv(["USDT_CONTRACT_BSC"], DEFAULT_USDT.bsc, production),
       tokenEnv: "USDT_CONTRACT_BSC",
-      decimals: Number(readEnv("USDT_DECIMALS_BSC", "18")),
+      decimals: readNumberEnv(["USDT_DECIMALS_BSC"], 18),
       rpcUrl: readEnv("BSC_RPC_URL"),
       rpcEnv: "BSC_RPC_URL",
       enabled:
@@ -125,7 +150,7 @@ export function getNetworkConfigs(): NetworkTokenConfig[] {
         (!production || bscApproved),
       finality: {
         mode: "confirmations",
-        confirmations: Number(readEnv("BSC_CONFIRMATIONS", "45")),
+        confirmations: readNumberEnv(["BSC_CONFIRMATIONS"], 45),
         description:
           "Use a conservative confirmation floor unless a BSC finalized-safe RPC path is configured.",
       },
@@ -139,17 +164,21 @@ export function getNetworkConfigs(): NetworkTokenConfig[] {
       label: "Solana",
       tokenStandard: "USDT SPL",
       chainId: null,
-      receiverAddress: readEnv("USDT_RECEIVER_SOLANA", RECEIVERS.solana),
+      receiverAddress: readNetworkEnv(["USDT_RECEIVER_SOLANA"], RECEIVERS.solana, production),
       receiverEnv: "USDT_RECEIVER_SOLANA",
-      usdtContractOrMint: readEnv("USDT_MINT_SOLANA", DEFAULT_USDT.solana),
+      usdtContractOrMint: readNetworkEnv(
+        ["USDT_MINT_SOLANA", "USDT_CONTRACT_SOLANA"],
+        DEFAULT_USDT.solana,
+        production,
+      ),
       tokenEnv: "USDT_MINT_SOLANA",
-      decimals: Number(readEnv("USDT_DECIMALS_SOLANA", "6")),
+      decimals: readNumberEnv(["USDT_DECIMALS_SOLANA"], 6),
       rpcUrl: readEnv("SOLANA_RPC_URL"),
       rpcEnv: "SOLANA_RPC_URL",
       enabled: readBooleanEnv("PAYMENTS_SOLANA_ENABLED", !production),
       finality: {
         mode: "solana_finalized",
-        confirmations: Number(readEnv("SOLANA_MIN_CONFIRMATIONS", "32")),
+        confirmations: readNumberEnv(["SOLANA_MIN_CONFIRMATIONS", "SOLANA_CONFIRMATIONS"], 32),
         description:
           "Require a finalized Solana transaction response and confirm the SPL token balance delta.",
       },
