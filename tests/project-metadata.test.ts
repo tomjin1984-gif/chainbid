@@ -54,6 +54,7 @@ test("ignores generic app titles and keeps the project brand", () => {
   );
 
   assert.equal(metadata.name, "Uniswap");
+  assert.equal(projectDisplayName("App", "https://app.uniswap.org"), "Uniswap");
 });
 
 test("falls back to the domain when metadata title is only a slogan", () => {

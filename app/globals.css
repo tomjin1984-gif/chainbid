@@ -241,7 +241,7 @@ html[data-theme="light"] .ranked-card-featured {
 html[data-theme="light"] .theme-toggle,
 html[data-theme="light"] .outbid-status-pill,
 html[data-theme="light"] .outbid-status-pill a,
-html[data-theme="light"] .leaderboard-toolbar > span,
+html[data-theme="light"] .manual-check-cta,
 html[data-theme="light"] .category-card,
 html[data-theme="light"] .rank-meta span,
 html[data-theme="light"] .activity-pill strong,
@@ -676,12 +676,24 @@ h2 {
   margin: 0;
 }
 
-.leaderboard-toolbar > span {
+.manual-check-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: 1px solid var(--line);
   border-radius: 999px;
   color: #c5d0d9;
   padding: 7px 11px;
   font-size: 12px;
+  font-weight: 720;
+  background: rgba(255, 255, 255, 0.035);
+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+}
+
+.manual-check-cta:hover {
+  border-color: rgba(0, 224, 164, 0.32);
+  color: var(--accent);
+  background: rgba(0, 224, 164, 0.08);
 }
 
 .category-bar {
@@ -2829,7 +2841,7 @@ html[data-theme="light"] .manual-check-result-card {
     margin-bottom: 8px;
   }
 
-  .leaderboard-toolbar > span {
+  .manual-check-cta {
     padding: 6px 9px;
     font-size: 11px;
   }

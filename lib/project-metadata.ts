@@ -74,10 +74,30 @@ function readTitle(html: string) {
   return match ? cleanText(match[1] ?? "") : "";
 }
 
+const genericSubdomains = new Set([
+  "app",
+  "apps",
+  "auth",
+  "dashboard",
+  "go",
+  "login",
+  "m",
+  "mobile",
+  "portal",
+  "trade",
+  "www",
+]);
+
 function hostnameName(url: URL) {
   const host = url.hostname.replace(/^www\./i, "");
-  const firstLabel = host.split(".")[0] ?? host;
-  return firstLabel
+  const labels = host.split(".").filter(Boolean);
+  const firstLabel = labels[0] ?? host;
+  const nameLabel =
+    labels.length > 1 && genericSubdomains.has(firstLabel.toLowerCase())
+      ? labels[1]
+      : firstLabel;
+
+  return (nameLabel ?? host)
     .split(/[-_]+/)
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))

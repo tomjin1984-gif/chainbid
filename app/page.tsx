@@ -466,7 +466,10 @@ export default async function Home({
       <section id="leaderboard" className="leaderboard-section">
         <div className="leaderboard-toolbar">
           <p className="eyebrow">LIVE RANKING</p>
-          <span>Credited payments only</span>
+          <a href="/manual-transaction-check" className="manual-check-cta">
+            Manual Check
+            <ArrowUpRight size={14} />
+          </a>
         </div>
 
         <div id="categories" className="category-row category-bar" aria-label="Leaderboard categories">

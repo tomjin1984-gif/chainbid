@@ -40,7 +40,9 @@ test("server-renders the crypto leaderboard", async () => {
   assert.match(html, /Increase claim amount/);
   assert.match(html, /Decrease claim amount/);
   assert.match(html, /New spots start at 5 USDT\./);
-  assert.match(html, /Credited payments only/);
+  assert.match(html, /Manual Check/);
+  assert.match(html, /href="\/manual-transaction-check"/);
+  assert.doesNotMatch(html, /Credited payments only/);
   assert.match(html, /Latest activity/);
   assert.match(html, /This leaderboard has processed/);
   assert.match(html, /since its launch/);
