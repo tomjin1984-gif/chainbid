@@ -53,6 +53,31 @@ interface SolanaTokenAccountsResponse {
 
 const transactionCache = new Map<string, Promise<SolanaTransaction | null>>();
 const tokenAccountsCache = new Map<string, Promise<Set<string>>>();
+const DEFAULT_SOLANA_FALLBACK_RPC_URLS = ["https://solana-rpc.publicnode.com"];
+
+function splitRpcUrls(value: string | undefined) {
+  return (value ?? "")
+    .split(",")
+    .map((url) => url.trim())
+    .filter(Boolean);
+}
+
+function solanaRpcOptions(primaryUrl: string) {
+  const configuredFallbacks = [
+    ...splitRpcUrls(process.env.SOLANA_RPC_FALLBACK_URLS),
+    ...splitRpcUrls(process.env.SOLANA_RPC_URL_FALLBACKS),
+  ];
+  const fallbackUrls = [...new Set([
+    ...configuredFallbacks,
+    ...DEFAULT_SOLANA_FALLBACK_RPC_URLS,
+  ])].filter((url) => url !== primaryUrl);
+
+  return {
+    timeoutMs: 4_000,
+    retries: 0,
+    fallbackUrls,
+  };
+}
 
 function accountKeyAt(tx: SolanaTransaction, index: number) {
   const key = tx.transaction.message.accountKeys[index];
@@ -167,10 +192,7 @@ export class SolanaUsdtVerifier implements PaymentVerifier {
           maxSupportedTransactionVersion: 0,
         },
       ],
-      {
-        timeoutMs: 4_000,
-        retries: 0,
-      },
+      solanaRpcOptions(rpcUrl),
     );
     transactionCache.set(cacheKey, request);
     return request;
@@ -203,10 +225,7 @@ export class SolanaUsdtVerifier implements PaymentVerifier {
           encoding: "jsonParsed",
         },
       ],
-      {
-        timeoutMs: 4_000,
-        retries: 0,
-      },
+      solanaRpcOptions(rpcUrl),
     )
       .then((response) => new Set((response.value ?? []).flatMap((account) => (
         account.pubkey ? [account.pubkey] : []

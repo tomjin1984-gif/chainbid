@@ -8,6 +8,7 @@ import {
   MANUAL_CHECK_OPEN_STATUSES,
   refreshKnownManualCheckOrder,
   type ManualCheckOutcome,
+  type ManualCheckProbe,
 } from "@/lib/payment/manual-check";
 import type { VerificationResult } from "@/lib/payment/types";
 import { errorMessage, jsonError, readJson } from "@/lib/http";
@@ -35,6 +36,23 @@ function publicVerification(result: VerificationResult | null, order: PaymentOrd
     failureReason: result?.failureReason ?? order.failureReason,
     explorerUrl: order.txHash ? network.explorerTxUrl(order.txHash) : null,
   };
+}
+
+function providerErrorMessage(errors: ManualCheckProbe[]) {
+  const reasons = [...new Set(
+    errors
+      .map((probe) => probe.result.failureReason)
+      .filter((reason): reason is string => Boolean(reason)),
+  )];
+
+  if (!reasons.length) {
+    return null;
+  }
+
+  return [
+    "Payment network RPC check failed. The transaction may be paid on-chain, but the site could not read it yet.",
+    ...reasons.slice(0, 2),
+  ].join(" ");
 }
 
 async function publicMatch(outcome: ManualCheckOutcome) {
@@ -71,6 +89,7 @@ export async function POST(request: Request) {
     const payload = manualCheckSchema.parse(await readJson(request));
     const repository = getRepository();
     const matches = [];
+    const providerErrors: ManualCheckProbe[] = [];
     const knownOrders = await repository.findPaymentOrdersByTxHash(payload.txHash);
 
     for (const order of knownOrders) {
@@ -89,6 +108,11 @@ export async function POST(request: Request) {
           order,
           repository,
           txHash: payload.txHash,
+          onResult(probe) {
+            if (probe.result.status === "provider_error") {
+              providerErrors.push(probe);
+            }
+          },
         });
 
         if (outcome) {
@@ -98,13 +122,14 @@ export async function POST(request: Request) {
       }
     }
 
+    const rpcMessage = providerErrorMessage(providerErrors);
     return Response.json({
       txHash: payload.txHash,
       matched: matches.length > 0,
       matches,
       message: matches.length
         ? "Transaction matched to a payment order."
-        : "No matching pending payment order was found for this transaction hash.",
+        : rpcMessage ?? "No matching pending payment order was found for this transaction hash.",
     });
   } catch (error) {
     return jsonError(errorMessage(error), 400);

@@ -32,6 +32,12 @@ interface ManualCheckCandidate {
   draft: PaymentOrderDraft | null;
 }
 
+export interface ManualCheckProbe {
+  order: PaymentOrderRecord;
+  network: SupportedNetwork;
+  result: VerificationResult;
+}
+
 export interface ManualCheckOutcome {
   order: PaymentOrderRecord;
   result: VerificationResult | null;
@@ -95,11 +101,13 @@ export async function findMatchingManualCheckCandidate(args: {
   order: PaymentOrderRecord;
   txHash: string;
   verifiers?: Partial<Record<SupportedNetwork, PaymentVerifier>>;
+  onResult?: (probe: ManualCheckProbe) => void;
 }): Promise<ManualCheckCandidate | null> {
   for (const network of availableNetworks(args.order.network, args.txHash)) {
     const candidate = candidateForNetwork(args.order, network);
     const verifier = args.verifiers?.[network] ?? createPaymentVerifier(network);
     const result = await verifier.verifyPayment(candidate.order, args.txHash);
+    args.onResult?.({ order: candidate.order, network, result });
 
     if (isMatchingPayment(result)) {
       return { ...candidate, result };
@@ -118,6 +126,7 @@ export async function attachManualCheckToOrder(args: {
   repository: Repository;
   txHash: string;
   verifiers?: Partial<Record<SupportedNetwork, PaymentVerifier>>;
+  onResult?: (probe: ManualCheckProbe) => void;
 }): Promise<ManualCheckOutcome | null> {
   if (args.order.status === "confirmed") {
     if (args.order.txHash !== args.txHash) {
@@ -137,6 +146,7 @@ export async function attachManualCheckToOrder(args: {
     order: args.order,
     txHash: args.txHash,
     verifiers: args.verifiers,
+    onResult: args.onResult,
   });
 
   if (!candidate) {

@@ -406,6 +406,134 @@ test("solana verifier matches an SPL destination token account", async () => {
   }
 });
 
+test("solana verifier falls back when the primary RPC rejects requests", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalRpc = process.env.SOLANA_RPC_URL;
+  const originalFallback = process.env.SOLANA_RPC_FALLBACK_URLS;
+  const draft = createPaymentOrderDraft({
+    projectId: "proj_solana_fallback",
+    network: "solana",
+    bidCreditUsdt: BigInt(5),
+  });
+  const order: PaymentOrderRecord = {
+    id: "pay_solana_fallback",
+    publicId: draft.publicId,
+    projectId: draft.projectId,
+    bidId: null,
+    network: draft.network,
+    receiverAddress: draft.receiverAddress,
+    tokenContractOrMint: draft.tokenContractOrMint,
+    bidCreditUsdt: draft.bidCreditUsdt,
+    expectedTransferAmountAtomic: draft.expectedTransferAmountAtomic,
+    expectedTransferAmountDisplay: draft.expectedTransferAmountDisplay,
+    expectedSenderAddress: null,
+    status: "waiting",
+    txHash: null,
+    blockNumberOrSlot: null,
+    confirmations: 0,
+    createdAt: new Date().toISOString(),
+    expiresAt: draft.expiresAt,
+    detectedAt: null,
+    confirmedAt: null,
+    creditedAt: null,
+    failureReason: null,
+  };
+  const primaryUrl = "https://solana-blocked.test";
+  const fallbackUrl = "https://solana-fallback.test";
+  const receiverTokenAccount = "ReceiverFallbackTokenAccount111111111111111111111";
+  const calls: string[] = [];
+
+  process.env.SOLANA_RPC_URL = primaryUrl;
+  process.env.SOLANA_RPC_FALLBACK_URLS = fallbackUrl;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = input.toString();
+    calls.push(url);
+
+    if (url === primaryUrl) {
+      return new Response("Forbidden", { status: 403 });
+    }
+
+    const body = JSON.parse(String(init?.body ?? "{}")) as { method?: string };
+    if (body.method === "getTokenAccountsByOwner") {
+      return Response.json({
+        jsonrpc: "2.0",
+        id: 1,
+        result: { value: [{ pubkey: receiverTokenAccount }] },
+      });
+    }
+
+    return Response.json({
+      jsonrpc: "2.0",
+      id: 1,
+      result: {
+        slot: 12347,
+        transaction: {
+          message: {
+            accountKeys: ["payer", receiverTokenAccount],
+            instructions: [
+              {
+                parsed: {
+                  type: "transferChecked",
+                  info: {
+                    mint: order.tokenContractOrMint,
+                    source: "payerTokenAccount",
+                    destination: receiverTokenAccount,
+                    tokenAmount: {
+                      amount: order.expectedTransferAmountAtomic.toString(),
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        },
+        meta: {
+          err: null,
+          preTokenBalances: [
+            {
+              accountIndex: 1,
+              mint: order.tokenContractOrMint,
+              uiTokenAmount: { amount: "0", decimals: 6 },
+            },
+          ],
+          postTokenBalances: [
+            {
+              accountIndex: 1,
+              mint: order.tokenContractOrMint,
+              uiTokenAmount: {
+                amount: order.expectedTransferAmountAtomic.toString(),
+                decimals: 6,
+              },
+            },
+          ],
+        },
+      },
+    });
+  }) as typeof fetch;
+
+  try {
+    const result = await new SolanaUsdtVerifier().verifyPayment(
+      order,
+      "solana_signature_fallback",
+    );
+    assert.equal(result.status, "confirmed");
+    assert.equal(result.amountAtomic, order.expectedTransferAmountAtomic);
+    assert.deepEqual(calls, [primaryUrl, fallbackUrl, primaryUrl, fallbackUrl]);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalRpc === undefined) {
+      delete process.env.SOLANA_RPC_URL;
+    } else {
+      process.env.SOLANA_RPC_URL = originalRpc;
+    }
+    if (originalFallback === undefined) {
+      delete process.env.SOLANA_RPC_FALLBACK_URLS;
+    } else {
+      process.env.SOLANA_RPC_FALLBACK_URLS = originalFallback;
+    }
+  }
+});
+
 test("solana verifier reports confirmed transactions as waiting for finality", async () => {
   const originalFetch = globalThis.fetch;
   const originalRpc = process.env.SOLANA_RPC_URL;
