@@ -44,7 +44,15 @@ async function paymentOrderPayload(order: PaymentOrderRecord, project: ProjectRe
 }
 
 function shouldRefreshVerification(order: PaymentOrderRecord) {
-  return Boolean(order.txHash) && (order.status === "detected" || order.status === "confirming");
+  if (order.network === "solana" && order.status === "waiting") {
+    return true;
+  }
+
+  return Boolean(order.txHash) && (
+    order.status === "detected" ||
+    order.status === "confirming" ||
+    order.status === "confirmed"
+  );
 }
 
 export async function GET(

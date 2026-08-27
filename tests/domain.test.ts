@@ -518,7 +518,14 @@ test("solana verifier falls back when the primary RPC rejects requests", async (
     );
     assert.equal(result.status, "confirmed");
     assert.equal(result.amountAtomic, order.expectedTransferAmountAtomic);
-    assert.deepEqual(calls, [primaryUrl, fallbackUrl, primaryUrl, fallbackUrl]);
+    assert.deepEqual(calls, [
+      primaryUrl,
+      primaryUrl,
+      fallbackUrl,
+      primaryUrl,
+      primaryUrl,
+      fallbackUrl,
+    ]);
   } finally {
     globalThis.fetch = originalFetch;
     if (originalRpc === undefined) {
@@ -530,6 +537,254 @@ test("solana verifier falls back when the primary RPC rejects requests", async (
       delete process.env.SOLANA_RPC_FALLBACK_URLS;
     } else {
       process.env.SOLANA_RPC_FALLBACK_URLS = originalFallback;
+    }
+  }
+});
+
+test("solana verifier retries after a transient cached RPC abort", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalRpc = process.env.SOLANA_RPC_URL;
+  const draft = createPaymentOrderDraft({
+    projectId: "proj_solana_retry",
+    network: "solana",
+    bidCreditUsdt: BigInt(5),
+  });
+  const order: PaymentOrderRecord = {
+    id: "pay_solana_retry",
+    publicId: draft.publicId,
+    projectId: draft.projectId,
+    bidId: null,
+    network: draft.network,
+    receiverAddress: draft.receiverAddress,
+    tokenContractOrMint: draft.tokenContractOrMint,
+    bidCreditUsdt: draft.bidCreditUsdt,
+    expectedTransferAmountAtomic: draft.expectedTransferAmountAtomic,
+    expectedTransferAmountDisplay: draft.expectedTransferAmountDisplay,
+    expectedSenderAddress: null,
+    status: "waiting",
+    txHash: null,
+    blockNumberOrSlot: null,
+    confirmations: 0,
+    createdAt: new Date().toISOString(),
+    expiresAt: draft.expiresAt,
+    detectedAt: null,
+    confirmedAt: null,
+    creditedAt: null,
+    failureReason: null,
+  };
+  const receiverTokenAccount = "ReceiverRetryTokenAccount11111111111111111111111";
+  let failRpc = true;
+  let calls = 0;
+
+  process.env.SOLANA_RPC_URL = "https://solana-retry.test";
+  globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+    calls += 1;
+    if (failRpc) {
+      const error = new Error("The operation was aborted");
+      error.name = "AbortError";
+      throw error;
+    }
+
+    const body = JSON.parse(String(init?.body ?? "{}")) as { method?: string };
+    if (body.method === "getTokenAccountsByOwner") {
+      return Response.json({
+        jsonrpc: "2.0",
+        id: 1,
+        result: { value: [{ pubkey: receiverTokenAccount }] },
+      });
+    }
+
+    return Response.json({
+      jsonrpc: "2.0",
+      id: 1,
+      result: {
+        slot: 12348,
+        transaction: {
+          message: {
+            accountKeys: ["payer", receiverTokenAccount],
+            instructions: [
+              {
+                parsed: {
+                  type: "transferChecked",
+                  info: {
+                    mint: order.tokenContractOrMint,
+                    source: "payerTokenAccount",
+                    destination: receiverTokenAccount,
+                    tokenAmount: {
+                      amount: order.expectedTransferAmountAtomic.toString(),
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        },
+        meta: {
+          err: null,
+          preTokenBalances: [
+            {
+              accountIndex: 1,
+              mint: order.tokenContractOrMint,
+              uiTokenAmount: { amount: "0", decimals: 6 },
+            },
+          ],
+          postTokenBalances: [
+            {
+              accountIndex: 1,
+              mint: order.tokenContractOrMint,
+              uiTokenAmount: {
+                amount: order.expectedTransferAmountAtomic.toString(),
+                decimals: 6,
+              },
+            },
+          ],
+        },
+      },
+    });
+  }) as typeof fetch;
+
+  try {
+    const verifier = new SolanaUsdtVerifier();
+    const first = await verifier.verifyPayment(order, "solana_signature_retry");
+    assert.equal(first.status, "provider_error");
+    assert.match(first.failureReason ?? "", /RPC getTransaction timed out/);
+
+    failRpc = false;
+    const second = await verifier.verifyPayment(order, "solana_signature_retry");
+    assert.equal(second.status, "confirmed");
+    assert.equal(second.amountAtomic, order.expectedTransferAmountAtomic);
+    assert.ok(calls > 2);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalRpc === undefined) {
+      delete process.env.SOLANA_RPC_URL;
+    } else {
+      process.env.SOLANA_RPC_URL = originalRpc;
+    }
+  }
+});
+
+test("solana verifier can discover a matching recent receiver transfer without a hash", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalRpc = process.env.SOLANA_RPC_URL;
+  const originalLookback = process.env.SOLANA_SIGNATURE_LOOKBACK;
+  const draft = createPaymentOrderDraft({
+    projectId: "proj_solana_indexed",
+    network: "solana",
+    bidCreditUsdt: BigInt(5),
+  });
+  const order: PaymentOrderRecord = {
+    id: "pay_solana_indexed",
+    publicId: draft.publicId,
+    projectId: draft.projectId,
+    bidId: null,
+    network: draft.network,
+    receiverAddress: draft.receiverAddress,
+    tokenContractOrMint: draft.tokenContractOrMint,
+    bidCreditUsdt: draft.bidCreditUsdt,
+    expectedTransferAmountAtomic: draft.expectedTransferAmountAtomic,
+    expectedTransferAmountDisplay: draft.expectedTransferAmountDisplay,
+    expectedSenderAddress: null,
+    status: "waiting",
+    txHash: null,
+    blockNumberOrSlot: null,
+    confirmations: 0,
+    createdAt: new Date().toISOString(),
+    expiresAt: draft.expiresAt,
+    detectedAt: null,
+    confirmedAt: null,
+    creditedAt: null,
+    failureReason: null,
+  };
+  const receiverTokenAccount = "ReceiverIndexedTokenAccount111111111111111111111";
+  const matchingSignature = "solana_signature_indexed";
+
+  process.env.SOLANA_RPC_URL = "https://solana-indexed.test";
+  process.env.SOLANA_SIGNATURE_LOOKBACK = "5";
+  globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+    const body = JSON.parse(String(init?.body ?? "{}")) as { method?: string };
+
+    if (body.method === "getTokenAccountsByOwner") {
+      return Response.json({
+        jsonrpc: "2.0",
+        id: 1,
+        result: { value: [{ pubkey: receiverTokenAccount }] },
+      });
+    }
+
+    if (body.method === "getSignaturesForAddress") {
+      return Response.json({
+        jsonrpc: "2.0",
+        id: 1,
+        result: [{ signature: matchingSignature, err: null }],
+      });
+    }
+
+    return Response.json({
+      jsonrpc: "2.0",
+      id: 1,
+      result: {
+        slot: 12349,
+        transaction: {
+          message: {
+            accountKeys: ["payer", receiverTokenAccount],
+            instructions: [
+              {
+                parsed: {
+                  type: "transferChecked",
+                  info: {
+                    mint: order.tokenContractOrMint,
+                    source: "payerTokenAccount",
+                    destination: receiverTokenAccount,
+                    tokenAmount: {
+                      amount: order.expectedTransferAmountAtomic.toString(),
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        },
+        meta: {
+          err: null,
+          preTokenBalances: [
+            {
+              accountIndex: 1,
+              mint: order.tokenContractOrMint,
+              uiTokenAmount: { amount: "0", decimals: 6 },
+            },
+          ],
+          postTokenBalances: [
+            {
+              accountIndex: 1,
+              mint: order.tokenContractOrMint,
+              uiTokenAmount: {
+                amount: order.expectedTransferAmountAtomic.toString(),
+                decimals: 6,
+              },
+            },
+          ],
+        },
+      },
+    });
+  }) as typeof fetch;
+
+  try {
+    const result = await new SolanaUsdtVerifier().verifyPayment(order);
+    assert.equal(result.status, "confirmed");
+    assert.equal(result.txHash, matchingSignature);
+    assert.equal(result.amountAtomic, order.expectedTransferAmountAtomic);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalRpc === undefined) {
+      delete process.env.SOLANA_RPC_URL;
+    } else {
+      process.env.SOLANA_RPC_URL = originalRpc;
+    }
+    if (originalLookback === undefined) {
+      delete process.env.SOLANA_SIGNATURE_LOOKBACK;
+    } else {
+      process.env.SOLANA_SIGNATURE_LOOKBACK = originalLookback;
     }
   }
 });

@@ -5,6 +5,21 @@ export interface JsonRpcResponse<T> {
   error?: { code: number; message: string; data?: unknown };
 }
 
+function isAbortLikeError(error: unknown) {
+  return (
+    error instanceof Error &&
+    (error.name === "AbortError" || /aborted|abort/i.test(error.message))
+  );
+}
+
+function readableRpcError(method: string, error: unknown, timeoutMs: number) {
+  if (isAbortLikeError(error)) {
+    return new Error(`RPC ${method} timed out after ${timeoutMs}ms.`);
+  }
+
+  return error instanceof Error ? error : new Error("RPC request failed");
+}
+
 export async function requestJsonRpc<T>(
   rpcUrl: string,
   method: string,
@@ -56,7 +71,7 @@ export async function requestJsonRpc<T>(
 
         return payload.result as T;
       } catch (error) {
-        lastError = error;
+        lastError = readableRpcError(method, error, timeoutMs);
         if (attempt < retries) {
           await new Promise((resolve) => setTimeout(resolve, 250 * 2 ** attempt));
         }

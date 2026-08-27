@@ -3,7 +3,7 @@ import type { Repository } from "@/lib/repository/types";
 import type { PaymentVerifier, VerificationResult } from "./types";
 import { createPaymentVerifier } from "./verifiers";
 
-const OPEN_STATUSES: PaymentOrderStatus[] = ["waiting", "detected", "confirming"];
+const OPEN_STATUSES: PaymentOrderStatus[] = ["waiting", "detected", "confirming", "confirmed"];
 
 export function statusFromVerification(
   order: PaymentOrderRecord,

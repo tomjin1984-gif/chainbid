@@ -80,18 +80,18 @@ export function CheckoutClient({
 
   const statusLabel = useMemo(() => {
     if (order.status === "credited") {
-      return "Bid credited";
+      return "Listed on leaderboard";
     }
     if (order.status === "confirmed") {
       return "Payment confirmed";
     }
     if (order.status === "confirming") {
       return order.confirmations
-        ? `Confirming on ${network.label} (${order.confirmations})`
-        : `Confirming on ${network.label}`;
+        ? `Paid, confirming on ${network.label} (${order.confirmations})`
+        : `Paid, confirming on ${network.label}`;
     }
     if (order.status === "detected") {
-      return "Payment detected";
+      return "Payment received";
     }
     if (order.status === "manual_review") {
       return "Manual review required";
@@ -101,6 +101,22 @@ export function CheckoutClient({
     }
     return "Waiting for payment";
   }, [network.label, order.status]);
+
+  const paymentProgressMessage = useMemo(() => {
+    if (order.status === "credited") {
+      return "Payment credited. Your project is now on the leaderboard.";
+    }
+
+    if (order.status === "confirmed") {
+      return "Payment confirmed. The site is adding your project to the leaderboard.";
+    }
+
+    if (order.status === "detected" || order.status === "confirming") {
+      return "Payment detected. Please wait for confirmations; your project will be listed automatically after final crediting.";
+    }
+
+    return null;
+  }, [order.status]);
 
   useEffect(() => {
     const interval = window.setInterval(async () => {
@@ -193,8 +209,12 @@ export function CheckoutClient({
       setMessage("Payment credited. The project is now on the leaderboard.");
       return;
     }
+    if (payload.order?.status === "confirmed") {
+      setMessage("Payment confirmed. The site is adding your project to the leaderboard.");
+      return;
+    }
     if (payload.verification?.status === "unconfirmed") {
-      setMessage(`Payment detected. Waiting for confirmations (${payload.verification.confirmations}).`);
+      setMessage(`Payment detected. Waiting for confirmations (${payload.verification.confirmations}). Your project will be listed automatically after final crediting.`);
       return;
     }
     if (payload.verification?.failureReason) {
@@ -276,6 +296,7 @@ export function CheckoutClient({
           <ShieldAlert size={18} />
           <p>{network.warning} Payments are final once confirmed on-chain.</p>
         </div>
+        {paymentProgressMessage ? <p className="status-message">{paymentProgressMessage}</p> : null}
       </section>
 
       <aside className="checkout-panel">

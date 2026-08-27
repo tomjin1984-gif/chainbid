@@ -51,8 +51,14 @@ interface SolanaTokenAccountsResponse {
   }>;
 }
 
+interface SolanaSignatureInfo {
+  signature?: string;
+  err?: unknown;
+}
+
 const transactionCache = new Map<string, Promise<SolanaTransaction | null>>();
 const tokenAccountsCache = new Map<string, Promise<Set<string>>>();
+const signaturesCache = new Map<string, Promise<SolanaSignatureInfo[]>>();
 const DEFAULT_SOLANA_FALLBACK_RPC_URLS = ["https://solana-rpc.publicnode.com"];
 
 function splitRpcUrls(value: string | undefined) {
@@ -73,10 +79,19 @@ function solanaRpcOptions(primaryUrl: string) {
   ])].filter((url) => url !== primaryUrl);
 
   return {
-    timeoutMs: 4_000,
-    retries: 0,
+    timeoutMs: 8_000,
+    retries: 1,
     fallbackUrls,
   };
+}
+
+function solanaSignatureLookback() {
+  const configured = Number(process.env.SOLANA_SIGNATURE_LOOKBACK ?? 25);
+  if (!Number.isFinite(configured)) {
+    return 25;
+  }
+
+  return Math.min(100, Math.max(5, Math.trunc(configured)));
 }
 
 function accountKeyAt(tx: SolanaTransaction, index: number) {
@@ -181,7 +196,8 @@ export class SolanaUsdtVerifier implements PaymentVerifier {
       transactionCache.clear();
     }
 
-    const request = requestJsonRpc<SolanaTransaction | null>(
+    let request: Promise<SolanaTransaction | null>;
+    request = requestJsonRpc<SolanaTransaction | null>(
       rpcUrl,
       "getTransaction",
       [
@@ -193,7 +209,13 @@ export class SolanaUsdtVerifier implements PaymentVerifier {
         },
       ],
       solanaRpcOptions(rpcUrl),
-    );
+    ).catch((error) => {
+      if (transactionCache.get(cacheKey) === request) {
+        transactionCache.delete(cacheKey);
+      }
+
+      throw error;
+    });
     transactionCache.set(cacheKey, request);
     return request;
   }
@@ -214,7 +236,8 @@ export class SolanaUsdtVerifier implements PaymentVerifier {
       tokenAccountsCache.clear();
     }
 
-    const request = requestJsonRpc<SolanaTokenAccountsResponse>(
+    let request: Promise<Set<string>>;
+    request = requestJsonRpc<SolanaTokenAccountsResponse>(
       rpcUrl,
       "getTokenAccountsByOwner",
       [
@@ -230,31 +253,94 @@ export class SolanaUsdtVerifier implements PaymentVerifier {
       .then((response) => new Set((response.value ?? []).flatMap((account) => (
         account.pubkey ? [account.pubkey] : []
       ))))
-      .catch(() => new Set<string>());
+      .catch(() => {
+        if (tokenAccountsCache.get(cacheKey) === request) {
+          tokenAccountsCache.delete(cacheKey);
+        }
+
+        return new Set<string>();
+      });
     tokenAccountsCache.set(cacheKey, request);
     return request;
   }
 
-  async verifyPayment(order: PaymentOrderRecord, txHashHint?: string) {
+  private getSignaturesForAddress(
+    rpcUrl: string,
+    address: string,
+    commitment: SolanaCommitment,
+  ) {
+    const cacheKey = `${rpcUrl}:${commitment}:${address}:${solanaSignatureLookback()}`;
+    const cached = signaturesCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    if (signaturesCache.size > 100) {
+      signaturesCache.clear();
+    }
+
+    let request: Promise<SolanaSignatureInfo[]>;
+    request = requestJsonRpc<SolanaSignatureInfo[]>(
+      rpcUrl,
+      "getSignaturesForAddress",
+      [
+        address,
+        {
+          commitment,
+          limit: solanaSignatureLookback(),
+        },
+      ],
+      solanaRpcOptions(rpcUrl),
+    ).catch((error) => {
+      if (signaturesCache.get(cacheKey) === request) {
+        signaturesCache.delete(cacheKey);
+      }
+
+      throw error;
+    });
+    signaturesCache.set(cacheKey, request);
+    return request;
+  }
+
+  private async recentReceiverSignatures(
+    rpcUrl: string,
+    order: PaymentOrderRecord,
+  ) {
+    const receiverTokenAccounts = await this.getReceiverTokenAccounts(
+      rpcUrl,
+      order.receiverAddress,
+      order.tokenContractOrMint,
+      "confirmed",
+    );
+    const addresses = [...new Set([...receiverTokenAccounts, order.receiverAddress])];
+    const signatures = new Set<string>();
+    let lastError: unknown = null;
+
+    for (const address of addresses) {
+      try {
+        const response = await this.getSignaturesForAddress(rpcUrl, address, "confirmed");
+        for (const item of response) {
+          if (!item.err && item.signature) {
+            signatures.add(item.signature);
+          }
+        }
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    if (!signatures.size && lastError) {
+      throw lastError;
+    }
+
+    return [...signatures];
+  }
+
+  private async verifyKnownTransaction(
+    order: PaymentOrderRecord,
+    txHash: string,
+  ) {
     const config = getNetworkConfig("solana");
-    const txHash = ensureTxHint(order, txHashHint);
-    if (!txHash) {
-      return verificationResult({
-        status: "not_found",
-        network: "solana",
-        failureReason: "No transaction hash hint or indexer candidate was available.",
-      });
-    }
-
-    if (!config.rpcUrl) {
-      return verificationResult({
-        status: "provider_error",
-        network: "solana",
-        txHash,
-        failureReason: `${config.rpcEnv} is not configured.`,
-      });
-    }
-
     try {
       let finalized = true;
       let tx = await this.getTransaction(config.rpcUrl, txHash, "finalized");
@@ -390,6 +476,46 @@ export class SolanaUsdtVerifier implements PaymentVerifier {
         status: "provider_error",
         network: "solana",
         txHash,
+        failureReason: error instanceof Error ? error.message : "Solana verification failed.",
+      });
+    }
+  }
+
+  async verifyPayment(order: PaymentOrderRecord, txHashHint?: string) {
+    const config = getNetworkConfig("solana");
+    const txHash = ensureTxHint(order, txHashHint);
+
+    if (!config.rpcUrl) {
+      return verificationResult({
+        status: "provider_error",
+        network: "solana",
+        txHash: txHash ?? undefined,
+        failureReason: `${config.rpcEnv} is not configured.`,
+      });
+    }
+
+    if (txHash) {
+      return this.verifyKnownTransaction(order, txHash);
+    }
+
+    try {
+      const signatures = await this.recentReceiverSignatures(config.rpcUrl, order);
+      for (const signature of signatures) {
+        const result = await this.verifyKnownTransaction(order, signature);
+        if (result.status === "confirmed" || result.status === "unconfirmed") {
+          return result;
+        }
+      }
+
+      return verificationResult({
+        status: "not_found",
+        network: "solana",
+        failureReason: "No recent Solana USDT transfer matched this order's unique amount.",
+      });
+    } catch (error) {
+      return verificationResult({
+        status: "provider_error",
+        network: "solana",
         failureReason: error instanceof Error ? error.message : "Solana verification failed.",
       });
     }
