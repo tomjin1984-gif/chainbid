@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   extractProjectMetadata,
+  projectDisplayName,
   resolveProjectMetadata,
 } from "../lib/project-metadata";
 
@@ -40,6 +41,33 @@ test("resolves project metadata from a submitted URL", async () => {
       description: "A crypto exchange for trading, wallets, and Web3 products.",
     },
   );
+});
+
+test("ignores generic app titles and keeps the project brand", () => {
+  const metadata = extractProjectMetadata(
+    `
+      <title>App</title>
+      <meta property="og:site_name" content="Uniswap">
+      <meta name="description" content="Decentralized exchange protocol for token swaps and liquidity markets.">
+    `,
+    "https://app.uniswap.org",
+  );
+
+  assert.equal(metadata.name, "Uniswap");
+});
+
+test("falls back to the domain when metadata title is only a slogan", () => {
+  const metadata = extractProjectMetadata(
+    `
+      <title>Do Only Good Everyday</title>
+      <meta property="og:title" content="Do Only Good Everyday">
+      <meta name="description" content="Open-source peer-to-peer digital currency with a large community.">
+    `,
+    "https://dogecoin.com",
+  );
+
+  assert.equal(metadata.name, "Dogecoin");
+  assert.equal(projectDisplayName("Do Only Good Everyday", "https://dogecoin.com"), "Dogecoin");
 });
 
 test("falls back to hostname metadata when fetch fails", async () => {

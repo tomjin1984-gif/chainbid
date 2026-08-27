@@ -23,6 +23,7 @@ import { getPublicAppUrl } from "@/lib/config/env";
 import { claimTopBid } from "@/lib/domain/ranking";
 import { formatUsdt } from "@/lib/domain/money";
 import { projectFaviconFallbackUrl } from "@/lib/project-icons";
+import { projectDisplayName } from "@/lib/project-metadata";
 import { getRepository } from "@/lib/repository";
 import type { ActivityEventRecord, LeaderboardEntry } from "@/lib/domain/types";
 
@@ -38,6 +39,10 @@ const leaderboardPageSize = 20;
 
 function projectLogoUrl(project: Pick<LeaderboardEntry, "logoUrl" | "url">) {
   return project.logoUrl ?? projectFaviconFallbackUrl(project.url);
+}
+
+function projectTitle(project: Pick<LeaderboardEntry, "name" | "url">) {
+  return projectDisplayName(project.name, project.url);
 }
 
 export const dynamic = "force-dynamic";
@@ -131,17 +136,17 @@ function LatestActivityStrip({
     const project = event.projectId
       ? projects.find((item) => item.id === event.projectId)
       : null;
-    const domain = project ? new URL(project.url).hostname : event.headline.split(" ")[0];
+    const title = project ? projectTitle(project) : event.headline.split(" ")[0];
     const Icon = activityIcons[event.kind] ?? Flame;
 
     return {
       id: event.id,
-      domain,
+      title,
       rank: project ? `#${project.rank}` : "live",
       amount: project ? formatUsdt(project.totalBidUsdt) : event.headline.split(" - ").at(-1) ?? "",
       age: formatActivityAge(event.createdAt),
       icon: Icon,
-      initials: project?.name.slice(0, 2).toUpperCase(),
+      initials: project ? projectTitle(project).slice(0, 2).toUpperCase() : null,
       logoUrl: project ? projectLogoUrl(project) : null,
     };
   });
@@ -169,7 +174,7 @@ function LatestActivityStrip({
                 )}
               </span>
               <div>
-                <strong>{item.domain}</strong>
+                <strong>{item.title}</strong>
                 <small>
                   at {item.rank} · {item.amount}
                 </small>
@@ -191,6 +196,7 @@ function ProjectRankCard({
   featured?: boolean;
 }) {
   const isTopRank = project.rank <= 3;
+  const title = projectTitle(project);
   const cardClassName = [
     "ranked-card",
     isTopRank ? "ranked-card-top" : "",
@@ -200,12 +206,12 @@ function ProjectRankCard({
     .join(" ");
 
   return (
-    <RankedCardShell className={cardClassName} href={project.url} label={`Visit ${project.name}`}>
+    <RankedCardShell className={cardClassName} href={project.url} label={`Visit ${title}`}>
       <a
         className="rank-card-main"
         data-card-main-link=""
         href={project.url}
-        aria-label={`Visit ${project.name}`}
+        aria-label={`Visit ${title}`}
         target="_blank"
         rel="noopener noreferrer"
       >
@@ -226,10 +232,10 @@ function ProjectRankCard({
               loading="lazy"
             />
           ) : (
-            <div className="logo-token">{project.name.slice(0, 2).toUpperCase()}</div>
+            <div className="logo-token">{title.slice(0, 2).toUpperCase()}</div>
           )}
           <div>
-            <span className="project-name">{project.name}</span>
+            <span className="project-name">{title}</span>
             <p>{project.description}</p>
           </div>
         </div>
@@ -246,7 +252,7 @@ function ProjectRankCard({
         href={`/submit?boost=${project.slug}&target=${project.nextRankTargetUsdt.toString()}`}
         className="button button-small rank-action"
         data-card-action=""
-        aria-label={`Boost ${project.name}`}
+        aria-label={`Boost ${title}`}
       >
         Boost
         <ArrowUpRight size={16} />

@@ -85,13 +85,72 @@ function hostnameName(url: URL) {
     .slice(0, 96);
 }
 
-function titleToName(title: string, fallback: string) {
+function compactName(value: string) {
+  return cleanText(value).toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function titleToCandidate(title: string) {
   const candidate = title
     .split(/\s(?:[|–—-]|::)\s/)
     .map((part) => part.trim())
     .find((part) => part.length >= 2);
 
-  return (candidate || fallback).slice(0, 96);
+  return (candidate ?? "").slice(0, 96);
+}
+
+function wordCount(value: string) {
+  return cleanText(value).split(/\s+/).filter(Boolean).length;
+}
+
+function isUsableProjectNameCandidate(candidate: string, fallback: string) {
+  const cleaned = cleanText(candidate);
+  const compactCandidate = compactName(cleaned);
+  const compactFallback = compactName(fallback);
+  const genericNames = new Set([
+    "app",
+    "home",
+    "homepage",
+    "login",
+    "signin",
+    "signup",
+    "welcome",
+    "website",
+    "officialwebsite",
+  ]);
+
+  if (cleaned.length < 2 || genericNames.has(compactCandidate)) {
+    return false;
+  }
+
+  if (
+    compactFallback.length >= 3 &&
+    wordCount(cleaned) >= 3 &&
+    !compactCandidate.includes(compactFallback)
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function chooseProjectName(candidates: string[], fallback: string) {
+  for (const title of candidates) {
+    const candidate = titleToCandidate(title);
+    if (isUsableProjectNameCandidate(candidate, fallback)) {
+      return candidate;
+    }
+  }
+
+  return fallback;
+}
+
+export function projectDisplayName(storedName: string, projectUrl: string) {
+  try {
+    const fallback = hostnameName(new URL(projectUrl));
+    return chooseProjectName([storedName], fallback);
+  } catch {
+    return cleanText(storedName).slice(0, 96) || "Project";
+  }
 }
 
 function truncateDescription(value: string) {
@@ -220,11 +279,15 @@ function responseLooksLikeHtml(response: Response) {
 export function extractProjectMetadata(html: string, projectUrl: string) {
   const url = new URL(projectUrl);
   const fallbackName = hostnameName(url);
-  const title =
-    readMetaContent(html, ["og:site_name", "application-name"]) ||
-    readMetaContent(html, ["og:title", "twitter:title"]) ||
-    readTitle(html);
-  const name = titleToName(title, fallbackName);
+  const name = chooseProjectName(
+    [
+      readMetaContent(html, ["og:title", "twitter:title"]),
+      readTitle(html),
+      readMetaContent(html, ["og:site_name"]),
+      readMetaContent(html, ["application-name"]),
+    ],
+    fallbackName,
+  );
   const description =
     truncateDescription(readMetaContent(html, ["description", "og:description", "twitter:description"])) ||
     truncateDescription(readTitle(html)) ||
