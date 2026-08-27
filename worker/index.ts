@@ -1,6 +1,7 @@
 /** Cloudflare Worker entry point for the vinext-starter template. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
+import { runPaymentMonitor } from "./payment-monitor";
 
 interface Env {
   ASSETS: {
@@ -21,8 +22,10 @@ interface ExecutionContext {
   passThroughOnException(): void;
 }
 
-function syncRuntimeEnv(env: Env, request: Request) {
-  process.env.CHAIN_BID_RUNTIME_HOST = new URL(request.url).hostname;
+function syncRuntimeEnv(env: Env, request?: Request) {
+  if (request) {
+    process.env.CHAIN_BID_RUNTIME_HOST = new URL(request.url).hostname;
+  }
 
   for (const [key, value] of Object.entries(env)) {
     if (typeof value === "string") {
@@ -55,6 +58,11 @@ const worker = {
     }
 
     return handler.fetch(request, env, ctx);
+  },
+
+  async scheduled(_controller: unknown, env: Env, ctx: ExecutionContext): Promise<void> {
+    syncRuntimeEnv(env);
+    ctx.waitUntil(runPaymentMonitor());
   },
 };
 

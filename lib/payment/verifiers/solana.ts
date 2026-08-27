@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { getNetworkConfig } from "@/lib/config/networks";
 import type { PaymentOrderRecord } from "@/lib/domain/types";
 import { requestJsonRpc } from "../rpc";
@@ -60,6 +61,173 @@ const transactionCache = new Map<string, Promise<SolanaTransaction | null>>();
 const tokenAccountsCache = new Map<string, Promise<Set<string>>>();
 const signaturesCache = new Map<string, Promise<SolanaSignatureInfo[]>>();
 const DEFAULT_SOLANA_FALLBACK_RPC_URLS = ["https://solana-rpc.publicnode.com"];
+const BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+const SOLANA_TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+const SOLANA_ASSOCIATED_TOKEN_PROGRAM_ID = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";
+const PROGRAM_DERIVED_ADDRESS_MARKER = "ProgramDerivedAddress";
+const ED25519_P = (BigInt(1) << BigInt(255)) - BigInt(19);
+const ED25519_D = mod(-BigInt(121665) * modInv(BigInt(121666)));
+const ED25519_SQRT_M1 = modPow(BigInt(2), (ED25519_P - BigInt(1)) / BigInt(4));
+
+function base58Decode(value: string) {
+  let decoded = BigInt(0);
+  for (const char of value) {
+    const index = BASE58_ALPHABET.indexOf(char);
+    if (index < 0) {
+      throw new Error("Invalid base58 character.");
+    }
+
+    decoded = decoded * BigInt(58) + BigInt(index);
+  }
+
+  let hex = decoded.toString(16);
+  if (hex.length % 2) {
+    hex = `0${hex}`;
+  }
+
+  let bytes = Uint8Array.from(hex.match(/.{2}/g)?.map((item) => parseInt(item, 16)) ?? []);
+  for (const char of value) {
+    if (char !== "1") {
+      break;
+    }
+    bytes = Uint8Array.from([0, ...bytes]);
+  }
+
+  return bytes;
+}
+
+function base58Decode32(value: string) {
+  const bytes = base58Decode(value);
+  if (bytes.length !== 32) {
+    throw new Error("Invalid Solana public key length.");
+  }
+
+  return bytes;
+}
+
+function base58Encode(bytes: Uint8Array) {
+  let value = BigInt(`0x${Buffer.from(bytes).toString("hex") || "0"}`);
+  let encoded = "";
+
+  while (value > BigInt(0)) {
+    const index = Number(value % BigInt(58));
+    encoded = BASE58_ALPHABET[index] + encoded;
+    value /= BigInt(58);
+  }
+
+  for (const byte of bytes) {
+    if (byte !== 0) {
+      break;
+    }
+    encoded = `1${encoded}`;
+  }
+
+  return encoded || "1";
+}
+
+function mod(value: bigint) {
+  const remainder = value % ED25519_P;
+  return remainder >= BigInt(0) ? remainder : remainder + ED25519_P;
+}
+
+function modPow(base: bigint, exponent: bigint) {
+  let result = BigInt(1);
+  let current = mod(base);
+  let remaining = exponent;
+
+  while (remaining > BigInt(0)) {
+    if (remaining & BigInt(1)) {
+      result = mod(result * current);
+    }
+    current = mod(current * current);
+    remaining >>= BigInt(1);
+  }
+
+  return result;
+}
+
+function modInv(value: bigint) {
+  return modPow(value, ED25519_P - BigInt(2));
+}
+
+function isEd25519Point(bytes: Uint8Array) {
+  if (bytes.length !== 32) {
+    return false;
+  }
+
+  const yBytes = Uint8Array.from(bytes);
+  const signBit = Boolean(yBytes[31] & 0x80);
+  yBytes[31] &= 0x7f;
+
+  let y = BigInt(0);
+  for (let index = 0; index < yBytes.length; index += 1) {
+    y += BigInt(yBytes[index]) << (BigInt(8) * BigInt(index));
+  }
+
+  if (y >= ED25519_P) {
+    return false;
+  }
+
+  const ySquared = mod(y * y);
+  const u = mod(ySquared - BigInt(1));
+  const v = mod(ED25519_D * ySquared + BigInt(1));
+  const xSquared = mod(u * modInv(v));
+  let x = modPow(xSquared, (ED25519_P + BigInt(3)) / BigInt(8));
+
+  if (mod(x * x - xSquared) !== BigInt(0)) {
+    x = mod(x * ED25519_SQRT_M1);
+  }
+
+  if (mod(x * x - xSquared) !== BigInt(0)) {
+    return false;
+  }
+
+  return !(x === BigInt(0) && signBit);
+}
+
+function createProgramAddress(seeds: Uint8Array[], programId: Uint8Array) {
+  const chunks = [
+    ...seeds,
+    programId,
+    new TextEncoder().encode(PROGRAM_DERIVED_ADDRESS_MARKER),
+  ];
+  const hash = createHash("sha256")
+    .update(Buffer.concat(chunks.map((chunk) => Buffer.from(chunk))))
+    .digest();
+
+  if (isEd25519Point(hash)) {
+    throw new Error("Derived Solana address is on curve.");
+  }
+
+  return base58Encode(hash);
+}
+
+function findProgramAddress(seeds: Uint8Array[], programId: Uint8Array) {
+  for (let bump = 255; bump >= 0; bump -= 1) {
+    try {
+      return createProgramAddress([...seeds, Uint8Array.from([bump])], programId);
+    } catch {
+      // Try the next bump.
+    }
+  }
+
+  return null;
+}
+
+function associatedTokenAddress(ownerAddress: string, mint: string) {
+  try {
+    return findProgramAddress(
+      [
+        base58Decode32(ownerAddress),
+        base58Decode32(SOLANA_TOKEN_PROGRAM_ID),
+        base58Decode32(mint),
+      ],
+      base58Decode32(SOLANA_ASSOCIATED_TOKEN_PROGRAM_ID),
+    );
+  } catch {
+    return null;
+  }
+}
 
 function splitRpcUrls(value: string | undefined) {
   return (value ?? "")
@@ -86,12 +254,20 @@ function solanaRpcOptions(primaryUrl: string) {
 }
 
 function solanaSignatureLookback() {
-  const configured = Number(process.env.SOLANA_SIGNATURE_LOOKBACK ?? 25);
+  const configured = Number(process.env.SOLANA_SIGNATURE_LOOKBACK ?? 50);
   if (!Number.isFinite(configured)) {
-    return 25;
+    return 50;
   }
 
   return Math.min(100, Math.max(5, Math.trunc(configured)));
+}
+
+function configuredReceiverTokenAccounts() {
+  return [
+    ...splitRpcUrls(process.env.SOLANA_RECEIVER_TOKEN_ACCOUNTS),
+    ...splitRpcUrls(process.env.SOLANA_RECEIVER_TOKEN_ACCOUNT),
+    ...splitRpcUrls(process.env.USDT_RECEIVER_TOKEN_ACCOUNT_SOLANA),
+  ];
 }
 
 function accountKeyAt(tx: SolanaTransaction, index: number) {
@@ -312,7 +488,18 @@ export class SolanaUsdtVerifier implements PaymentVerifier {
       order.tokenContractOrMint,
       "confirmed",
     );
-    const addresses = [...new Set([...receiverTokenAccounts, order.receiverAddress])];
+    const derivedTokenAccount = associatedTokenAddress(
+      order.receiverAddress,
+      order.tokenContractOrMint,
+    );
+    const addresses = [
+      ...new Set([
+        ...configuredReceiverTokenAccounts(),
+        ...(derivedTokenAccount ? [derivedTokenAccount] : []),
+        ...receiverTokenAccounts,
+        order.receiverAddress,
+      ]),
+    ];
     const signatures = new Set<string>();
     let lastError: unknown = null;
 

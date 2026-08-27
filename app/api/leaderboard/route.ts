@@ -1,5 +1,6 @@
 import { getRepository } from "@/lib/repository";
 import { publicLeaderboardEntry } from "@/lib/repository/serializers";
+import { runAutomaticPaymentSweep } from "@/lib/payment/auto-sweep";
 import { errorMessage, jsonError } from "@/lib/http";
 import { checkRateLimit, rateLimitKey } from "@/lib/security/rate-limit";
 
@@ -16,7 +17,13 @@ export async function GET(request: Request) {
 
   try {
     const category = new URL(request.url).searchParams.get("category") ?? undefined;
-    const entries = await getRepository().getLeaderboard(category);
+    const repository = getRepository();
+    await runAutomaticPaymentSweep({
+      repository,
+      limit: 2,
+      maxWaitMs: 1_500,
+    });
+    const entries = await repository.getLeaderboard(category);
     return Response.json({ entries: entries.map(publicLeaderboardEntry) });
   } catch (error) {
     return jsonError(errorMessage(error), 500);

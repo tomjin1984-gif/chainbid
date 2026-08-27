@@ -2292,6 +2292,29 @@ html[data-theme="light"] .manual-check-result-card {
   background: rgba(255, 255, 255, 0.66);
 }
 
+html[data-theme="light"] .status-message {
+  border-color: rgba(0, 154, 118, 0.24);
+  background: rgba(0, 184, 137, 0.12);
+  color: #056f58;
+}
+
+html[data-theme="light"] .manual-check-form .status-message {
+  color: #045f4c;
+}
+
+html[data-theme="light"] .warning-line,
+html[data-theme="light"] .warning-box {
+  border-color: rgba(171, 118, 0, 0.24);
+  background: rgba(255, 207, 90, 0.18);
+  color: #6d4b00;
+}
+
+html[data-theme="light"] .error-line {
+  border-color: rgba(194, 48, 48, 0.24);
+  background: rgba(255, 107, 107, 0.12);
+  color: #8f1f1f;
+}
+
 .categories-page {
   display: grid;
   align-content: start;

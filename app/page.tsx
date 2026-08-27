@@ -24,6 +24,7 @@ import { claimTopBid } from "@/lib/domain/ranking";
 import { formatUsdt } from "@/lib/domain/money";
 import { projectFaviconFallbackUrl } from "@/lib/project-icons";
 import { projectDisplayName } from "@/lib/project-metadata";
+import { runAutomaticPaymentSweep } from "@/lib/payment/auto-sweep";
 import { getRepository } from "@/lib/repository";
 import type { ActivityEventRecord, LeaderboardEntry } from "@/lib/domain/types";
 
@@ -394,6 +395,11 @@ export default async function Home({
   const params = await searchParams;
   const activeCategory = params.category ?? "All";
   const repository = getRepository();
+  await runAutomaticPaymentSweep({
+    repository,
+    limit: 3,
+    maxWaitMs: 3_000,
+  });
   const [projects, allProjects, activity] = await Promise.all([
     repository.getLeaderboard(activeCategory),
     repository.getLeaderboard(),
