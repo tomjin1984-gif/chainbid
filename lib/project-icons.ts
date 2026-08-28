@@ -303,3 +303,18 @@ export function projectFaviconFallbackUrl(projectUrl: string) {
     return null;
   }
 }
+
+export function projectIconProxyUrl(projectUrl: string, iconUrl?: string | null) {
+  const url = projectUrl.trim();
+  if (!url) {
+    return null;
+  }
+
+  const params = new URLSearchParams({ url });
+  const icon = iconUrl?.trim();
+  if (icon) {
+    params.set("src", icon);
+  }
+
+  return `/api/project-icon?${params.toString()}`;
+}

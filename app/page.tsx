@@ -22,7 +22,7 @@ import { getNetworkConfigs } from "@/lib/config/networks";
 import { getPublicAppUrl } from "@/lib/config/env";
 import { claimTopBid } from "@/lib/domain/ranking";
 import { formatUsdt } from "@/lib/domain/money";
-import { projectFaviconFallbackUrl } from "@/lib/project-icons";
+import { projectIconProxyUrl } from "@/lib/project-icons";
 import { projectDisplayName } from "@/lib/project-metadata";
 import { runAutomaticPaymentSweep } from "@/lib/payment/auto-sweep";
 import { getRepository } from "@/lib/repository";
@@ -39,7 +39,7 @@ const activityIcons = {
 const leaderboardPageSize = 20;
 
 function projectLogoUrl(project: Pick<LeaderboardEntry, "logoUrl" | "url">) {
-  return project.logoUrl ?? projectFaviconFallbackUrl(project.url);
+  return projectIconProxyUrl(project.url, project.logoUrl);
 }
 
 function projectTitle(project: Pick<LeaderboardEntry, "name" | "url">) {
