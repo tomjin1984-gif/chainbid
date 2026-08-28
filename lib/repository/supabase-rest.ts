@@ -16,6 +16,10 @@ function shouldPersistTxOnOrder(result: VerificationResult) {
   return result.status !== "not_found" && result.status !== "provider_error";
 }
 
+function shouldPersistConfirmations(result: VerificationResult) {
+  return result.status !== "not_found" && result.status !== "provider_error";
+}
+
 function serviceUrl(path: string) {
   return `${requireEnv("SUPABASE_URL").replace(/\/+$/, "")}${path}`;
 }
@@ -228,12 +232,20 @@ export class SupabaseRestRepository implements Repository {
         method: "PATCH",
         body: JSON.stringify({
           status: nextStatus,
-          tx_hash: persistTx ? result.txHash : null,
-          block_number_or_slot: result.blockNumberOrSlot,
-          confirmations: result.confirmations,
-          detected_at: persistTx ? new Date().toISOString() : null,
-          confirmed_at: nextStatus === "confirmed" ? new Date().toISOString() : null,
           failure_reason: result.failureReason,
+          ...(shouldPersistConfirmations(result)
+            ? { confirmations: result.confirmations }
+            : {}),
+          ...(persistTx
+            ? {
+                tx_hash: result.txHash,
+                block_number_or_slot: result.blockNumberOrSlot,
+                detected_at: new Date().toISOString(),
+              }
+            : {}),
+          ...(nextStatus === "confirmed"
+            ? { confirmed_at: new Date().toISOString() }
+            : {}),
         }),
       },
     );

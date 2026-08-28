@@ -44,7 +44,7 @@ async function paymentOrderPayload(order: PaymentOrderRecord, project: ProjectRe
 }
 
 function shouldRefreshVerification(order: PaymentOrderRecord) {
-  if (order.network === "solana" && order.status === "waiting") {
+  if (order.status === "waiting") {
     return true;
   }
 

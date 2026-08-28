@@ -46,6 +46,17 @@ function rpcOptions(network: Extract<SupportedNetwork, "ethereum" | "bsc">, prim
   };
 }
 
+function readIntegerEnv(name: string, fallback: number) {
+  const value = Number(process.env[name]);
+  return Number.isFinite(value) && value > 0 ? Math.trunc(value) : fallback;
+}
+
+function logLookbackBlocks(network: Extract<SupportedNetwork, "ethereum" | "bsc">) {
+  const specific = `${network.toUpperCase()}_LOG_LOOKBACK_BLOCKS`;
+  const fallback = network === "bsc" ? 3_000 : 1_200;
+  return readIntegerEnv(specific, readIntegerEnv("EVM_LOG_LOOKBACK_BLOCKS", fallback));
+}
+
 function providerFailureReason(error: unknown, label: string) {
   const message = error instanceof Error ? error.message : "EVM verification failed.";
   if (message.includes("empty response") || message.includes("unreadable JSON")) {
@@ -62,31 +73,74 @@ export class EvmUsdtVerifier implements PaymentVerifier {
     this.network = network;
   }
 
+  private async latestBlockNumber(rpcUrl: string) {
+    const latestHex = await requestJsonRpc<string>(
+      rpcUrl,
+      "eth_blockNumber",
+      [],
+      rpcOptions(this.network, rpcUrl),
+    );
+    return BigInt(latestHex);
+  }
+
+  private async findRecentTransferHash(order: PaymentOrderRecord, rpcUrl: string) {
+    const latest = await this.latestBlockNumber(rpcUrl);
+    const lookback = BigInt(logLookbackBlocks(this.network));
+    const fromBlock = latest > lookback ? latest - lookback : BigInt(0);
+    const logs = await requestJsonRpc<EvmLog[]>(
+      rpcUrl,
+      "eth_getLogs",
+      [
+        {
+          address: order.tokenContractOrMint,
+          fromBlock: `0x${fromBlock.toString(16)}`,
+          toBlock: "latest",
+          topics: [TRANSFER_TOPIC, null, addressTopic(order.receiverAddress)],
+        },
+      ],
+      rpcOptions(this.network, rpcUrl),
+    );
+
+    const matchingLogs = logs
+      .filter((log) => (
+        log.transactionHash &&
+        normalizeHex(log.address) === normalizeHex(order.tokenContractOrMint) &&
+        normalizeHex(log.topics[0] ?? "") === TRANSFER_TOPIC &&
+        normalizeHex(log.topics[2] ?? "") === normalizeHex(addressTopic(order.receiverAddress)) &&
+        amountFromLogData(log.data) === order.expectedTransferAmountAtomic
+      ))
+      .sort((first, second) => Number(BigInt(second.blockNumber ?? "0x0") - BigInt(first.blockNumber ?? "0x0")));
+
+    return matchingLogs[0]?.transactionHash ?? null;
+  }
+
   async verifyPayment(order: PaymentOrderRecord, txHashHint?: string) {
     const config = getNetworkConfig(this.network);
     const txHash = ensureTxHint(order, txHashHint);
-    if (!txHash) {
-      return verificationResult({
-        status: "not_found",
-        network: this.network,
-        failureReason: "No transaction hash hint or indexer candidate was available.",
-      });
-    }
 
     if (!config.rpcUrl) {
       return verificationResult({
         status: "provider_error",
         network: this.network,
-        txHash,
+        txHash: txHash ?? undefined,
         failureReason: `${config.rpcEnv} is not configured.`,
       });
     }
 
     try {
+      const detectedTxHash = txHash ?? await this.findRecentTransferHash(order, config.rpcUrl);
+      if (!detectedTxHash) {
+        return verificationResult({
+          status: "not_found",
+          network: this.network,
+          failureReason: "No recent USDT Transfer log matched this order's unique amount.",
+        });
+      }
+
       const receipt = await requestJsonRpc<EvmReceipt | null>(
         config.rpcUrl,
         "eth_getTransactionReceipt",
-        [txHash],
+        [detectedTxHash],
         rpcOptions(this.network, config.rpcUrl),
       );
 
@@ -94,7 +148,7 @@ export class EvmUsdtVerifier implements PaymentVerifier {
         return verificationResult({
           status: "not_found",
           network: this.network,
-          txHash,
+          txHash: detectedTxHash,
           failureReason: "Transaction receipt was not found.",
         });
       }
@@ -103,7 +157,7 @@ export class EvmUsdtVerifier implements PaymentVerifier {
         return verificationResult({
           status: "failed_transaction",
           network: this.network,
-          txHash,
+          txHash: detectedTxHash,
           blockNumberOrSlot: receipt.blockNumber,
           rawReference: receipt.transactionHash,
           failureReason: "Transaction receipt status is failed.",
@@ -123,7 +177,7 @@ export class EvmUsdtVerifier implements PaymentVerifier {
         return verificationResult({
           status: "wrong_receiver",
           network: this.network,
-          txHash,
+          txHash: detectedTxHash,
           tokenContractOrMint: order.tokenContractOrMint,
           receiverAddress: order.receiverAddress,
           blockNumberOrSlot: receipt.blockNumber,
@@ -140,7 +194,7 @@ export class EvmUsdtVerifier implements PaymentVerifier {
         return verificationResult({
           status: "wrong_sender",
           network: this.network,
-          txHash,
+          txHash: detectedTxHash,
           tokenContractOrMint: order.tokenContractOrMint,
           senderAddress: sender,
           receiverAddress: order.receiverAddress,
@@ -156,7 +210,7 @@ export class EvmUsdtVerifier implements PaymentVerifier {
         return verificationResult({
           status: "wrong_amount",
           network: this.network,
-          txHash,
+          txHash: detectedTxHash,
           tokenContractOrMint: order.tokenContractOrMint,
           senderAddress: sender,
           receiverAddress: order.receiverAddress,
@@ -167,13 +221,7 @@ export class EvmUsdtVerifier implements PaymentVerifier {
         });
       }
 
-      const latestHex = await requestJsonRpc<string>(
-        config.rpcUrl,
-        "eth_blockNumber",
-        [],
-        rpcOptions(this.network, config.rpcUrl),
-      );
-      const latest = BigInt(latestHex);
+      const latest = await this.latestBlockNumber(config.rpcUrl);
       const block = BigInt(receipt.blockNumber);
       const confirmations = Number(latest - block + BigInt(1));
 
@@ -181,7 +229,7 @@ export class EvmUsdtVerifier implements PaymentVerifier {
         return verificationResult({
           status: "unconfirmed",
           network: this.network,
-          txHash,
+          txHash: detectedTxHash,
           tokenContractOrMint: order.tokenContractOrMint,
           senderAddress: sender,
           receiverAddress: order.receiverAddress,
@@ -196,7 +244,7 @@ export class EvmUsdtVerifier implements PaymentVerifier {
       return verificationResult({
         status: "confirmed",
         network: this.network,
-        txHash,
+        txHash: detectedTxHash,
         tokenContractOrMint: order.tokenContractOrMint,
         senderAddress: sender,
         receiverAddress: order.receiverAddress,

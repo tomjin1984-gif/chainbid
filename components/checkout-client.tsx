@@ -100,7 +100,7 @@ export function CheckoutClient({
       return "Payment window expired";
     }
     return "Waiting for payment";
-  }, [network.label, order.status]);
+  }, [network.label, order.confirmations, order.status]);
 
   const paymentProgressMessage = useMemo(() => {
     if (order.status === "credited") {

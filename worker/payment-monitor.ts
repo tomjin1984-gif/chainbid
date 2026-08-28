@@ -2,10 +2,21 @@ import { runPaymentWorkerCycle } from "@/lib/payment/worker";
 import { getRepository } from "@/lib/repository";
 
 export async function runPaymentMonitor() {
-  return runPaymentWorkerCycle({
+  const results = await runPaymentWorkerCycle({
     repository: getRepository(),
-    limit: Number(process.env.PAYMENT_WORKER_BATCH_SIZE ?? 50),
+    limit: Number(process.env.PAYMENT_WORKER_BATCH_SIZE ?? 100),
   });
+
+  console.log(
+    JSON.stringify({
+      event: "payment_worker_finished",
+      processed: results.length,
+      credited: results.filter((result) => result.credited).length,
+      failed: results.filter((result) => result.error).length,
+    }),
+  );
+
+  return results;
 }
 
 if (process.env.RUN_PAYMENT_MONITOR_ONCE === "true") {

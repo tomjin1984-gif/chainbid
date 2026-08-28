@@ -22,6 +22,20 @@ interface TronTransactionInfo {
   log?: TronLog[];
 }
 
+interface TronGridTrc20Event {
+  transaction_id?: string;
+  token_info?: {
+    address?: string;
+  };
+  from?: string;
+  to?: string;
+  value?: string;
+}
+
+interface TronGridTrc20Response {
+  data?: TronGridTrc20Event[];
+}
+
 function base58Decode(value: string) {
   let decoded = BigInt(0);
   for (const char of value) {
@@ -69,40 +83,106 @@ function tronAddressToTopic(address: string) {
   return evmAddressHex.padStart(64, "0").toLowerCase();
 }
 
+function tronApiBaseUrl(rpcUrl: string) {
+  return rpcUrl.replace(/\/+(?:walletsolidity|wallet)?\/?$/i, "").replace(/\/+$/, "");
+}
+
+function tronScanLimit() {
+  const configured = Number(process.env.TRON_EVENT_LOOKBACK ?? 50);
+  if (!Number.isFinite(configured)) {
+    return 50;
+  }
+
+  return Math.min(200, Math.max(10, Math.trunc(configured)));
+}
+
+async function fetchRecentTrc20Events(order: PaymentOrderRecord, rpcUrl: string) {
+  const url = new URL(
+    `/v1/accounts/${encodeURIComponent(order.receiverAddress)}/transactions/trc20`,
+    tronApiBaseUrl(rpcUrl),
+  );
+  url.searchParams.set("only_confirmed", "true");
+  url.searchParams.set("limit", tronScanLimit().toString());
+  url.searchParams.set("contract_address", order.tokenContractOrMint);
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5_000);
+
+  try {
+    const headers: Record<string, string> = { accept: "application/json" };
+    if (process.env.TRONGRID_API_KEY) {
+      headers["TRON-PRO-API-KEY"] = process.env.TRONGRID_API_KEY;
+    }
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers,
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`TRON TRC20 event scan failed with HTTP ${response.status}`);
+    }
+
+    const text = await response.text();
+    if (!text.trim()) {
+      throw new Error("TRON TRC20 event scan returned an empty response.");
+    }
+
+    return JSON.parse(text) as TronGridTrc20Response;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export class TronUsdtVerifier implements PaymentVerifier {
   readonly network = "tron" as const;
+
+  private async findRecentTransferHash(order: PaymentOrderRecord, rpcUrl: string) {
+    const response = await fetchRecentTrc20Events(order, rpcUrl);
+    const transfer = (response.data ?? []).find((event) => (
+      event.transaction_id &&
+      event.to === order.receiverAddress &&
+      event.token_info?.address === order.tokenContractOrMint &&
+      event.value === order.expectedTransferAmountAtomic.toString()
+    ));
+
+    return transfer?.transaction_id ?? null;
+  }
 
   async verifyPayment(order: PaymentOrderRecord, txHashHint?: string) {
     const config = getNetworkConfig("tron");
     const txHash = ensureTxHint(order, txHashHint);
-    if (!txHash) {
-      return verificationResult({
-        status: "not_found",
-        network: "tron",
-        failureReason: "No transaction hash hint or indexer candidate was available.",
-      });
-    }
 
     if (!config.rpcUrl) {
       return verificationResult({
         status: "provider_error",
         network: "tron",
-        txHash,
+        txHash: txHash ?? undefined,
         failureReason: `${config.rpcEnv} is not configured.`,
       });
     }
 
     try {
+      const detectedTxHash = txHash ?? await this.findRecentTransferHash(order, config.rpcUrl);
+      if (!detectedTxHash) {
+        return verificationResult({
+          status: "not_found",
+          network: "tron",
+          failureReason: "No recent TRC20 USDT transfer matched this order's unique amount.",
+        });
+      }
+
       const info = await requestJson<TronTransactionInfo>(
         `${config.rpcUrl.replace(/\/+$/, "")}/walletsolidity/gettransactioninfobyid`,
-        { value: txHash },
+        { value: detectedTxHash },
       );
 
       if (!info?.id) {
         return verificationResult({
           status: "not_found",
           network: "tron",
-          txHash,
+          txHash: detectedTxHash,
           failureReason: "TRON transaction was not found in solidity endpoint.",
         });
       }
@@ -111,7 +191,7 @@ export class TronUsdtVerifier implements PaymentVerifier {
         return verificationResult({
           status: "failed_transaction",
           network: "tron",
-          txHash,
+          txHash: detectedTxHash,
           blockNumberOrSlot: info.blockNumber?.toString() ?? null,
           rawReference: info.id,
           failureReason: "TRON transaction receipt is not SUCCESS.",
@@ -131,7 +211,7 @@ export class TronUsdtVerifier implements PaymentVerifier {
         return verificationResult({
           status: "wrong_receiver",
           network: "tron",
-          txHash,
+          txHash: detectedTxHash,
           tokenContractOrMint: order.tokenContractOrMint,
           receiverAddress: order.receiverAddress,
           blockNumberOrSlot: info.blockNumber?.toString() ?? null,
@@ -145,7 +225,7 @@ export class TronUsdtVerifier implements PaymentVerifier {
         return verificationResult({
           status: "wrong_amount",
           network: "tron",
-          txHash,
+          txHash: detectedTxHash,
           tokenContractOrMint: order.tokenContractOrMint,
           senderAddress: transfer.topics?.[1] ?? null,
           receiverAddress: order.receiverAddress,
@@ -159,7 +239,7 @@ export class TronUsdtVerifier implements PaymentVerifier {
       return verificationResult({
         status: "confirmed",
         network: "tron",
-        txHash,
+        txHash: detectedTxHash,
         tokenContractOrMint: order.tokenContractOrMint,
         senderAddress: transfer.topics?.[1] ?? null,
         receiverAddress: order.receiverAddress,

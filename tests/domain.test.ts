@@ -11,10 +11,16 @@ import { createPaymentOrderDraft, createPaymentOrderDraftForPublicId } from "../
 import { attachManualCheckToOrder } from "../lib/payment/manual-check";
 import { networksForTransactionHash } from "../lib/payment/network-detection";
 import { processPaymentOrder } from "../lib/payment/worker";
+import { EvmUsdtVerifier } from "../lib/payment/verifiers/evm";
 import { SolanaUsdtVerifier } from "../lib/payment/verifiers/solana";
+import { TronUsdtVerifier } from "../lib/payment/verifiers/tron";
 import { devRepository } from "../lib/repository/dev-store";
 import type { PaymentVerifier, VerificationResult } from "../lib/payment/types";
 import type { PaymentOrderRecord } from "../lib/domain/types";
+
+function evmAddressTopic(address: string) {
+  return `0x${address.toLowerCase().replace(/^0x/, "").padStart(64, "0")}`;
+}
 
 test("validates whole-USDT bid limits", () => {
   assert.equal(parseWholeUsdt("5"), BigInt(5));
@@ -309,6 +315,228 @@ test("rechecking a confirming payment can credit it after finality", async () =>
 
   const credited = await devRepository.getPaymentOrder(order.publicId);
   assert.equal(credited?.status, "credited");
+});
+
+test("confirmed payment orders credit without another RPC lookup", async () => {
+  const project = await devRepository.getProjectBySlug("solana");
+  assert.ok(project);
+
+  const draft = createPaymentOrderDraft({
+    projectId: project.id,
+    network: "bsc",
+    bidCreditUsdt: BigInt(7),
+    now: new Date("2026-08-23T00:25:00.000Z"),
+  });
+  const order = await devRepository.createPaymentOrder(draft);
+  await devRepository.recordVerification(
+    order.publicId,
+    {
+      status: "confirmed",
+      network: "bsc",
+      txHash: "0xconfirmedwithoutsecondlookup",
+      tokenContractOrMint: order.tokenContractOrMint,
+      senderAddress: "0xsender",
+      receiverAddress: order.receiverAddress,
+      amountAtomic: order.expectedTransferAmountAtomic,
+      blockNumberOrSlot: "0x10",
+      confirmations: 45,
+      rawReference: "0xconfirmedwithoutsecondlookup",
+      failureReason: null,
+    },
+    "confirmed",
+  );
+
+  const confirmed = await devRepository.getPaymentOrder(order.publicId);
+  assert.ok(confirmed);
+
+  const result = await processPaymentOrder({
+    order: confirmed,
+    repository: devRepository,
+    verifier: {
+      network: "bsc",
+      async verifyPayment() {
+        throw new Error("RPC should not be called for an already confirmed order.");
+      },
+    },
+  });
+
+  assert.equal(result.credited, true);
+  assert.equal((await devRepository.getPaymentOrder(order.publicId))?.status, "credited");
+});
+
+test("evm verifier can discover a matching recent USDT transfer without a hash", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalRpc = process.env.BSC_RPC_URL;
+  const draft = createPaymentOrderDraft({
+    projectId: "proj_bsc_auto",
+    network: "bsc",
+    bidCreditUsdt: BigInt(5),
+  });
+  const order: PaymentOrderRecord = {
+    id: "pay_bsc_auto",
+    publicId: draft.publicId,
+    projectId: draft.projectId,
+    bidId: null,
+    network: draft.network,
+    receiverAddress: draft.receiverAddress,
+    tokenContractOrMint: draft.tokenContractOrMint,
+    bidCreditUsdt: draft.bidCreditUsdt,
+    expectedTransferAmountAtomic: draft.expectedTransferAmountAtomic,
+    expectedTransferAmountDisplay: draft.expectedTransferAmountDisplay,
+    expectedSenderAddress: null,
+    status: "waiting",
+    txHash: null,
+    blockNumberOrSlot: null,
+    confirmations: 0,
+    createdAt: new Date().toISOString(),
+    expiresAt: draft.expiresAt,
+    detectedAt: null,
+    confirmedAt: null,
+    creditedAt: null,
+    failureReason: null,
+  };
+  const txHash = "0xbscautodiscovered";
+  const transferLog = {
+    address: order.tokenContractOrMint,
+    topics: [
+      "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+      evmAddressTopic("0x1111111111111111111111111111111111111111"),
+      evmAddressTopic(order.receiverAddress),
+    ],
+    data: `0x${order.expectedTransferAmountAtomic.toString(16)}`,
+    blockNumber: "0x1000",
+    transactionHash: txHash,
+  };
+
+  process.env.BSC_RPC_URL = "https://bsc-auto.test";
+  globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+    const body = JSON.parse(String(init?.body ?? "{}")) as { method?: string };
+
+    if (body.method === "eth_blockNumber") {
+      return Response.json({ jsonrpc: "2.0", id: 1, result: "0x1030" });
+    }
+
+    if (body.method === "eth_getLogs") {
+      return Response.json({ jsonrpc: "2.0", id: 1, result: [transferLog] });
+    }
+
+    if (body.method === "eth_getTransactionReceipt") {
+      return Response.json({
+        jsonrpc: "2.0",
+        id: 1,
+        result: {
+          transactionHash: txHash,
+          status: "0x1",
+          blockNumber: "0x1000",
+          logs: [transferLog],
+        },
+      });
+    }
+
+    throw new Error(`Unexpected RPC method ${body.method}`);
+  }) as typeof fetch;
+
+  try {
+    const result = await new EvmUsdtVerifier("bsc").verifyPayment(order);
+    assert.equal(result.status, "confirmed");
+    assert.equal(result.txHash, txHash);
+    assert.equal(result.amountAtomic, order.expectedTransferAmountAtomic);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalRpc === undefined) {
+      delete process.env.BSC_RPC_URL;
+    } else {
+      process.env.BSC_RPC_URL = originalRpc;
+    }
+  }
+});
+
+test("tron verifier can discover a matching recent TRC20 transfer without a hash", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalRpc = process.env.TRON_RPC_URL;
+  const draft = createPaymentOrderDraft({
+    projectId: "proj_tron_auto",
+    network: "tron",
+    bidCreditUsdt: BigInt(5),
+  });
+  const order: PaymentOrderRecord = {
+    id: "pay_tron_auto",
+    publicId: draft.publicId,
+    projectId: draft.projectId,
+    bidId: null,
+    network: draft.network,
+    receiverAddress: draft.receiverAddress,
+    tokenContractOrMint: draft.tokenContractOrMint,
+    bidCreditUsdt: draft.bidCreditUsdt,
+    expectedTransferAmountAtomic: draft.expectedTransferAmountAtomic,
+    expectedTransferAmountDisplay: draft.expectedTransferAmountDisplay,
+    expectedSenderAddress: null,
+    status: "waiting",
+    txHash: null,
+    blockNumberOrSlot: null,
+    confirmations: 0,
+    createdAt: new Date().toISOString(),
+    expiresAt: draft.expiresAt,
+    detectedAt: null,
+    confirmedAt: null,
+    creditedAt: null,
+    failureReason: null,
+  };
+  const txHash = "806856e09b7fcb70939fe8d315f0b89f0338c17f6ab615d3f109364996286ec3";
+
+  process.env.TRON_RPC_URL = "https://api.trongrid.test";
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = input.toString();
+
+    if (init?.method === "GET" && url.includes("/transactions/trc20")) {
+      return Response.json({
+        data: [
+          {
+            transaction_id: txHash,
+            token_info: { address: order.tokenContractOrMint },
+            from: "TSourceAddress1111111111111111111111111",
+            to: order.receiverAddress,
+            value: order.expectedTransferAmountAtomic.toString(),
+          },
+        ],
+      });
+    }
+
+    if (init?.method === "POST" && url.endsWith("/walletsolidity/gettransactioninfobyid")) {
+      return Response.json({
+        id: txHash,
+        blockNumber: 123456,
+        receipt: { result: "SUCCESS" },
+        log: [
+          {
+            address: order.tokenContractOrMint,
+            topics: [
+              "ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+              "0000000000000000000000000000000000000000000000000000000000000000",
+              "000000000000000000000000e8e541bebe0d02583474c07734a5f60cb9ddd48d",
+            ],
+            data: order.expectedTransferAmountAtomic.toString(16),
+          },
+        ],
+      });
+    }
+
+    throw new Error(`Unexpected TRON request ${url}`);
+  }) as typeof fetch;
+
+  try {
+    const result = await new TronUsdtVerifier().verifyPayment(order);
+    assert.equal(result.status, "confirmed");
+    assert.equal(result.txHash, txHash);
+    assert.equal(result.amountAtomic, order.expectedTransferAmountAtomic);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalRpc === undefined) {
+      delete process.env.TRON_RPC_URL;
+    } else {
+      process.env.TRON_RPC_URL = originalRpc;
+    }
+  }
 });
 
 test("solana verifier matches an SPL destination token account", async () => {
@@ -785,6 +1013,132 @@ test("solana verifier can discover a matching recent receiver transfer without a
       delete process.env.SOLANA_SIGNATURE_LOOKBACK;
     } else {
       process.env.SOLANA_SIGNATURE_LOOKBACK = originalLookback;
+    }
+  }
+});
+
+test("solana verifier refreshes receiver signatures after an empty automatic scan", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalRpc = process.env.SOLANA_RPC_URL;
+  const draft = createPaymentOrderDraft({
+    projectId: "proj_solana_uncached_signatures",
+    network: "solana",
+    bidCreditUsdt: BigInt(5),
+  });
+  const order: PaymentOrderRecord = {
+    id: "pay_solana_uncached_signatures",
+    publicId: draft.publicId,
+    projectId: draft.projectId,
+    bidId: null,
+    network: draft.network,
+    receiverAddress: draft.receiverAddress,
+    tokenContractOrMint: draft.tokenContractOrMint,
+    bidCreditUsdt: draft.bidCreditUsdt,
+    expectedTransferAmountAtomic: draft.expectedTransferAmountAtomic,
+    expectedTransferAmountDisplay: draft.expectedTransferAmountDisplay,
+    expectedSenderAddress: null,
+    status: "waiting",
+    txHash: null,
+    blockNumberOrSlot: null,
+    confirmations: 0,
+    createdAt: new Date().toISOString(),
+    expiresAt: draft.expiresAt,
+    detectedAt: null,
+    confirmedAt: null,
+    creditedAt: null,
+    failureReason: null,
+  };
+  const receiverTokenAccount = "ReceiverUncachedTokenAccount111111111111111111";
+  const matchingSignature = "solana_signature_after_empty_scan";
+  let signatureLookups = 0;
+
+  process.env.SOLANA_RPC_URL = "https://solana-uncached-signatures.test";
+  globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+    const body = JSON.parse(String(init?.body ?? "{}")) as { method?: string };
+
+    if (body.method === "getTokenAccountsByOwner") {
+      return Response.json({
+        jsonrpc: "2.0",
+        id: 1,
+        result: { value: [{ pubkey: receiverTokenAccount }] },
+      });
+    }
+
+    if (body.method === "getSignaturesForAddress") {
+      signatureLookups += 1;
+      return Response.json({
+        jsonrpc: "2.0",
+        id: 1,
+        result: signatureLookups <= 3
+          ? []
+          : [{ signature: matchingSignature, err: null }],
+      });
+    }
+
+    return Response.json({
+      jsonrpc: "2.0",
+      id: 1,
+      result: {
+        slot: 12351,
+        transaction: {
+          message: {
+            accountKeys: ["payer", receiverTokenAccount],
+            instructions: [
+              {
+                parsed: {
+                  type: "transferChecked",
+                  info: {
+                    mint: order.tokenContractOrMint,
+                    source: "payerTokenAccount",
+                    destination: receiverTokenAccount,
+                    tokenAmount: {
+                      amount: order.expectedTransferAmountAtomic.toString(),
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        },
+        meta: {
+          err: null,
+          preTokenBalances: [
+            {
+              accountIndex: 1,
+              mint: order.tokenContractOrMint,
+              uiTokenAmount: { amount: "0", decimals: 6 },
+            },
+          ],
+          postTokenBalances: [
+            {
+              accountIndex: 1,
+              mint: order.tokenContractOrMint,
+              uiTokenAmount: {
+                amount: order.expectedTransferAmountAtomic.toString(),
+                decimals: 6,
+              },
+            },
+          ],
+        },
+      },
+    });
+  }) as typeof fetch;
+
+  try {
+    const verifier = new SolanaUsdtVerifier();
+    const first = await verifier.verifyPayment(order);
+    assert.equal(first.status, "not_found");
+
+    const second = await verifier.verifyPayment(order);
+    assert.equal(second.status, "confirmed");
+    assert.equal(second.txHash, matchingSignature);
+    assert.equal(second.amountAtomic, order.expectedTransferAmountAtomic);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalRpc === undefined) {
+      delete process.env.SOLANA_RPC_URL;
+    } else {
+      process.env.SOLANA_RPC_URL = originalRpc;
     }
   }
 });

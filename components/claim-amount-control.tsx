@@ -31,10 +31,6 @@ export function ClaimAmountControl({
   const formattedAmount = useMemo(() => usdtFormatter.format(amount), [amount]);
 
   useEffect(() => {
-    setAmount(normalizeAmount(initialAmount));
-  }, [initialAmount]);
-
-  useEffect(() => {
     function handleCategoryChange(event: Event) {
       const category = (event as CustomEvent<{ category?: string }>).detail?.category;
       const nextAmount = category ? categoryAmounts[category] : null;

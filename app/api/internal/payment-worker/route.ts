@@ -25,5 +25,7 @@ export async function POST(request: Request) {
   return Response.json({
     processed: results.length,
     credited: results.filter((result) => result.credited).length,
+    failed: results.filter((result) => result.error).length,
+    errors: results.flatMap((result) => result.error ? [result.error] : []).slice(0, 5),
   });
 }

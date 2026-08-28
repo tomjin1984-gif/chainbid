@@ -20,6 +20,10 @@ function shouldPersistTxOnOrder(result: VerificationResult) {
   return result.status !== "not_found" && result.status !== "provider_error";
 }
 
+function shouldPersistConfirmations(result: VerificationResult) {
+  return result.status !== "not_found" && result.status !== "provider_error";
+}
+
 function id(prefix: string) {
   const uuid = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
   return `${prefix}_${uuid.replace(/[^a-zA-Z0-9]/g, "").slice(0, 24)}`;
@@ -230,10 +234,10 @@ class DevRepository implements Repository {
     const updated: PaymentOrderRecord = {
       ...order,
       status: nextStatus,
-      txHash: persistTx ? result.txHash : null,
-      blockNumberOrSlot: result.blockNumberOrSlot,
-      confirmations: result.confirmations,
-      detectedAt: persistTx ? (order.detectedAt ?? nowIso()) : null,
+      txHash: persistTx ? result.txHash : order.txHash,
+      blockNumberOrSlot: result.blockNumberOrSlot ?? order.blockNumberOrSlot,
+      confirmations: shouldPersistConfirmations(result) ? result.confirmations : order.confirmations,
+      detectedAt: persistTx ? (order.detectedAt ?? nowIso()) : order.detectedAt,
       confirmedAt: nextStatus === "confirmed" ? nowIso() : order.confirmedAt,
       failureReason: result.failureReason,
     };

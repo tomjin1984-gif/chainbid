@@ -1,4 +1,4 @@
-import { readBooleanEnv, readEnv, isProduction } from "./env";
+import { readBooleanEnv, isProduction } from "./env";
 import type { SupportedNetwork } from "@/lib/domain/types";
 
 export interface FinalityPolicy {
@@ -51,6 +51,14 @@ function readConfiguredEnv(names: string[]) {
   return "";
 }
 
+function readConfiguredUrlEnv(names: string[]) {
+  const value = readConfiguredEnv(names);
+  return value
+    .split(",")
+    .map((url) => url.trim())
+    .find(Boolean) ?? "";
+}
+
 function readNetworkEnv(names: string[], fallback: string, production: boolean) {
   return readConfiguredEnv(names) || (production ? "" : fallback);
 }
@@ -97,7 +105,7 @@ export function getNetworkConfigs(): NetworkTokenConfig[] {
       usdtContractOrMint: readNetworkEnv(["USDT_CONTRACT_TRON"], DEFAULT_USDT.tron, production),
       tokenEnv: "USDT_CONTRACT_TRON",
       decimals: readNumberEnv(["USDT_DECIMALS_TRON"], 6),
-      rpcUrl: readEnv("TRON_RPC_URL"),
+      rpcUrl: readConfiguredUrlEnv(["TRON_RPC_URL", "TRON_RPC_FALLBACK_URLS"]),
       rpcEnv: "TRON_RPC_URL",
       enabled: readBooleanEnv("PAYMENTS_TRON_ENABLED", !production),
       finality: {
@@ -120,7 +128,7 @@ export function getNetworkConfigs(): NetworkTokenConfig[] {
       usdtContractOrMint: readNetworkEnv(["USDT_CONTRACT_ETHEREUM"], DEFAULT_USDT.ethereum, production),
       tokenEnv: "USDT_CONTRACT_ETHEREUM",
       decimals: readNumberEnv(["USDT_DECIMALS_ETHEREUM"], 6),
-      rpcUrl: readEnv("ETHEREUM_RPC_URL"),
+      rpcUrl: readConfiguredUrlEnv(["ETHEREUM_RPC_URL", "ETHEREUM_RPC_FALLBACK_URLS"]),
       rpcEnv: "ETHEREUM_RPC_URL",
       enabled: readBooleanEnv("PAYMENTS_ETHEREUM_ENABLED", !production),
       finality: {
@@ -143,7 +151,7 @@ export function getNetworkConfigs(): NetworkTokenConfig[] {
       usdtContractOrMint: readNetworkEnv(["USDT_CONTRACT_BSC"], DEFAULT_USDT.bsc, production),
       tokenEnv: "USDT_CONTRACT_BSC",
       decimals: readNumberEnv(["USDT_DECIMALS_BSC"], 18),
-      rpcUrl: readEnv("BSC_RPC_URL"),
+      rpcUrl: readConfiguredUrlEnv(["BSC_RPC_URL", "BSC_RPC_FALLBACK_URLS"]),
       rpcEnv: "BSC_RPC_URL",
       enabled:
         readBooleanEnv("PAYMENTS_BSC_ENABLED", !production) &&
@@ -173,7 +181,7 @@ export function getNetworkConfigs(): NetworkTokenConfig[] {
       ),
       tokenEnv: "USDT_MINT_SOLANA",
       decimals: readNumberEnv(["USDT_DECIMALS_SOLANA"], 6),
-      rpcUrl: readEnv("SOLANA_RPC_URL"),
+      rpcUrl: readConfiguredUrlEnv(["SOLANA_RPC_URL", "SOLANA_RPC_FALLBACK_URLS", "SOLANA_RPC_URL_FALLBACKS"]),
       rpcEnv: "SOLANA_RPC_URL",
       enabled: readBooleanEnv("PAYMENTS_SOLANA_ENABLED", !production),
       finality: {

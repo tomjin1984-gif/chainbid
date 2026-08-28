@@ -59,7 +59,6 @@ interface SolanaSignatureInfo {
 
 const transactionCache = new Map<string, Promise<SolanaTransaction | null>>();
 const tokenAccountsCache = new Map<string, Promise<Set<string>>>();
-const signaturesCache = new Map<string, Promise<SolanaSignatureInfo[]>>();
 const DEFAULT_SOLANA_FALLBACK_RPC_URLS = ["https://solana-rpc.publicnode.com"];
 const BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 const SOLANA_TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
@@ -372,8 +371,7 @@ export class SolanaUsdtVerifier implements PaymentVerifier {
       transactionCache.clear();
     }
 
-    let request: Promise<SolanaTransaction | null>;
-    request = requestJsonRpc<SolanaTransaction | null>(
+    const request = requestJsonRpc<SolanaTransaction | null>(
       rpcUrl,
       "getTransaction",
       [
@@ -385,13 +383,21 @@ export class SolanaUsdtVerifier implements PaymentVerifier {
         },
       ],
       solanaRpcOptions(rpcUrl),
-    ).catch((error) => {
-      if (transactionCache.get(cacheKey) === request) {
-        transactionCache.delete(cacheKey);
-      }
+    )
+      .then((transaction) => {
+        if (!transaction && transactionCache.get(cacheKey) === request) {
+          transactionCache.delete(cacheKey);
+        }
 
-      throw error;
-    });
+        return transaction;
+      })
+      .catch((error) => {
+        if (transactionCache.get(cacheKey) === request) {
+          transactionCache.delete(cacheKey);
+        }
+
+        throw error;
+      });
     transactionCache.set(cacheKey, request);
     return request;
   }
@@ -412,8 +418,7 @@ export class SolanaUsdtVerifier implements PaymentVerifier {
       tokenAccountsCache.clear();
     }
 
-    let request: Promise<Set<string>>;
-    request = requestJsonRpc<SolanaTokenAccountsResponse>(
+    const request = requestJsonRpc<SolanaTokenAccountsResponse>(
       rpcUrl,
       "getTokenAccountsByOwner",
       [
@@ -445,18 +450,7 @@ export class SolanaUsdtVerifier implements PaymentVerifier {
     address: string,
     commitment: SolanaCommitment,
   ) {
-    const cacheKey = `${rpcUrl}:${commitment}:${address}:${solanaSignatureLookback()}`;
-    const cached = signaturesCache.get(cacheKey);
-    if (cached) {
-      return cached;
-    }
-
-    if (signaturesCache.size > 100) {
-      signaturesCache.clear();
-    }
-
-    let request: Promise<SolanaSignatureInfo[]>;
-    request = requestJsonRpc<SolanaSignatureInfo[]>(
+    return requestJsonRpc<SolanaSignatureInfo[]>(
       rpcUrl,
       "getSignaturesForAddress",
       [
@@ -467,15 +461,7 @@ export class SolanaUsdtVerifier implements PaymentVerifier {
         },
       ],
       solanaRpcOptions(rpcUrl),
-    ).catch((error) => {
-      if (signaturesCache.get(cacheKey) === request) {
-        signaturesCache.delete(cacheKey);
-      }
-
-      throw error;
-    });
-    signaturesCache.set(cacheKey, request);
-    return request;
+    );
   }
 
   private async recentReceiverSignatures(
