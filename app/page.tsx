@@ -198,6 +198,7 @@ function ProjectRankCard({
 }) {
   const isTopRank = project.rank <= 3;
   const title = projectTitle(project);
+  const projectClickHref = `/api/click/${encodeURIComponent(project.id)}`;
   const cardClassName = [
     "ranked-card",
     isTopRank ? "ranked-card-top" : "",
@@ -207,11 +208,11 @@ function ProjectRankCard({
     .join(" ");
 
   return (
-    <RankedCardShell className={cardClassName} href={project.url} label={`Visit ${title}`}>
+    <RankedCardShell className={cardClassName} href={projectClickHref} label={`Visit ${title}`}>
       <a
         className="rank-card-main"
         data-card-main-link=""
-        href={project.url}
+        href={projectClickHref}
         aria-label={`Visit ${title}`}
         target="_blank"
         rel="noopener noreferrer"

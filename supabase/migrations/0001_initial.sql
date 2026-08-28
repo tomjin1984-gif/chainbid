@@ -304,27 +304,41 @@ security definer
 as $$
 declare
   target_url text;
+  target_rank integer;
+  click_increment integer;
 begin
-  select projects.url into target_url from projects
-  where id = p_target_project_id and status = 'active';
+  select ranked.url, ranked.rank_position
+  into target_url, target_rank
+  from (
+    select
+      projects.id,
+      projects.url,
+      row_number() over (
+        order by projects.total_bid_usdt desc, projects.ranking_timestamp asc
+      )::integer as rank_position
+    from projects
+    where projects.status = 'active'
+  ) ranked
+  where ranked.id = p_target_project_id;
 
   if target_url is null then
     return;
   end if;
 
-  if not exists (
-    select 1 from click_events
-    where project_id = p_target_project_id
-      and click_events.ip_hash = p_ip_hash
-      and created_at > now() - interval '15 minutes'
-  ) then
-    insert into click_events (project_id, ip_hash, user_agent)
-    values (p_target_project_id, p_ip_hash, left(coalesce(p_user_agent, ''), 500));
+  click_increment := case
+    when target_rank <= 3 then 15
+    when target_rank <= 10 then 10
+    when target_rank <= 20 then 5
+    else 3
+  end;
 
-    update projects
-    set click_count = click_count + 1
-    where id = p_target_project_id;
-  end if;
+  insert into click_events (project_id, ip_hash, user_agent)
+  values (p_target_project_id, p_ip_hash, left(coalesce(p_user_agent, ''), 500));
+
+  update projects
+  set click_count = click_count + click_increment::bigint,
+      updated_at = now()
+  where id = p_target_project_id;
 
   return query select target_url;
 end;

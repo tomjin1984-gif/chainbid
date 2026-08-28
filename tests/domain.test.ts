@@ -3,7 +3,12 @@ import test from "node:test";
 import { z } from "zod";
 import { getNetworkConfig } from "../lib/config/networks";
 import { parseWholeUsdt, createUniqueTransferAmountAtomic, formatAtomicAmount } from "../lib/domain/money";
-import { claimTopBid, sortProjectsForLeaderboard, targetToPassRank } from "../lib/domain/ranking";
+import {
+  claimTopBid,
+  clickIncrementForRank,
+  sortProjectsForLeaderboard,
+  targetToPassRank,
+} from "../lib/domain/ranking";
 import { normalizeProjectUrl } from "../lib/domain/url";
 import { errorMessage } from "../lib/http";
 import { assertSafeMetadataUrl } from "../lib/security/ssrf";
@@ -42,6 +47,16 @@ test("applies ranking, #1 claim, normal pass, and tie ordering", () => {
   assert.equal(sorted[0].rankingTimestamp, "2026-01-01T00:00:00.000Z");
   assert.equal(claimTopBid(projects), BigInt(1005));
   assert.equal(targetToPassRank(2, projects), BigInt(1001));
+});
+
+test("weights outbound clicks by leaderboard rank", () => {
+  assert.equal(clickIncrementForRank(1), 15);
+  assert.equal(clickIncrementForRank(3), 15);
+  assert.equal(clickIncrementForRank(4), 10);
+  assert.equal(clickIncrementForRank(10), 10);
+  assert.equal(clickIncrementForRank(11), 5);
+  assert.equal(clickIncrementForRank(20), 5);
+  assert.equal(clickIncrementForRank(21), 3);
 });
 
 test("creates exact unique transfer amounts without changing bid credit", () => {

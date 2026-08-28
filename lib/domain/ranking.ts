@@ -20,6 +20,22 @@ export function claimTopBid(projects: Pick<ProjectRecord, "totalBidUsdt" | "rank
   return top ? top.totalBidUsdt + BigInt(5) : BigInt(5);
 }
 
+export function clickIncrementForRank(rank: number) {
+  if (rank <= 3) {
+    return 15;
+  }
+
+  if (rank <= 10) {
+    return 10;
+  }
+
+  if (rank <= 20) {
+    return 5;
+  }
+
+  return 3;
+}
+
 export function targetToPassRank(
   rank: number,
   projects: Pick<ProjectRecord, "totalBidUsdt" | "rankingTimestamp">[],

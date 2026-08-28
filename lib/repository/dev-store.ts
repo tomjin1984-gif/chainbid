@@ -1,4 +1,4 @@
-import { decorateLeaderboard, rankForTotalBid } from "@/lib/domain/ranking";
+import { clickIncrementForRank, decorateLeaderboard, rankForTotalBid } from "@/lib/domain/ranking";
 import { normalizeProjectUrl } from "@/lib/domain/url";
 import type {
   ActivityEventRecord,
@@ -319,7 +319,11 @@ class DevRepository implements Repository {
       return null;
     }
 
-    const updated = { ...project, clickCount: project.clickCount + BigInt(1), updatedAt: nowIso() };
+    const rank = decorateLeaderboard([...this.projects.values()]).find(
+      (entry) => entry.id === projectId,
+    )?.rank;
+    const clickWeight = BigInt(clickIncrementForRank(rank ?? Number.MAX_SAFE_INTEGER));
+    const updated = { ...project, clickCount: project.clickCount + clickWeight, updatedAt: nowIso() };
     this.projects.set(projectId, updated);
     return updated.url;
   }
