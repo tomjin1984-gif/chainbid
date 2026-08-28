@@ -246,7 +246,7 @@ html[data-theme="light"] .category-card,
 html[data-theme="light"] .rank-meta span,
 html[data-theme="light"] .activity-pill strong,
 html[data-theme="light"] .rules-page h2,
-html[data-theme="light"] .refresh-button {
+html[data-theme="light"] .footer-social-link {
   color: #26323d;
 }
 
@@ -1024,6 +1024,10 @@ h2 {
   font-size: 13px;
 }
 
+.pagination-bar-centered {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .pagination-main {
   display: grid;
   justify-items: center;
@@ -1041,8 +1045,7 @@ h2 {
 
 .page-control,
 .page-number,
-.page-ellipsis,
-.refresh-button {
+.page-ellipsis {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1073,18 +1076,6 @@ h2 {
 .page-ellipsis,
 .pagination-range {
   color: #aab3bd;
-}
-
-.refresh-button {
-  gap: 7px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.035);
-  color: #f3f6f8;
-  padding: 7px 12px;
-  font-size: 12px;
-  font-weight: 760;
-  white-space: nowrap;
 }
 
 .activity-footer {
@@ -1169,6 +1160,25 @@ h2 {
 
 .footer-links a {
   color: var(--accent);
+}
+
+.footer-social-link {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(0, 224, 164, 0.3);
+  border-radius: 999px;
+  background: rgba(0, 224, 164, 0.08);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.footer-social-link:hover {
+  border-color: rgba(0, 224, 164, 0.62);
+  background: rgba(0, 224, 164, 0.16);
 }
 
 .outbid-hero {
@@ -3083,7 +3093,7 @@ html[data-theme="light"] .error-line {
   }
 
   .pagination-bar {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
     margin-top: 14px;
   }
@@ -3109,12 +3119,5 @@ html[data-theme="light"] .error-line {
 
   .pagination-range {
     font-size: 12px;
-  }
-
-  .refresh-button {
-    align-self: end;
-    min-height: 28px;
-    padding: 5px 9px;
-    font-size: 11px;
   }
 }

@@ -50,7 +50,9 @@ test("server-renders the crypto leaderboard", async () => {
   assert.match(html, /since its launch/);
   assert.match(html, /Claim #1/);
   assert.match(html, /1(?:<!-- -->)? - (?:<!-- -->)?20(?:<!-- -->)? of (?:<!-- -->)?20/);
-  assert.match(html, /Refresh/);
+  assert.doesNotMatch(html, /Refresh/);
+  assert.match(html, /https:\/\/x\.com\/HyperJanus/);
+  assert.match(html, /Follow HyperJanus on X/);
   assert.match(html, /\/api\/project-icon\?/);
   assert.match(html, /href="\/api\/click\/uniswap"/);
   assert.match(html, /href="\/submit\?boost=uniswap&amp;target=/);

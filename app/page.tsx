@@ -8,7 +8,6 @@ import {
   ArrowUpRight,
   Crown,
   Flame,
-  RefreshCw,
   Rocket,
   Swords,
 } from "lucide-react";
@@ -296,7 +295,7 @@ function LeaderboardPagination({
   const pages = getPaginationItems(currentPage, pageCount);
 
   return (
-    <nav className="pagination-bar" aria-label="Leaderboard pagination">
+    <nav className="pagination-bar pagination-bar-centered" aria-label="Leaderboard pagination">
       <div className="pagination-main">
         <div className="pagination-pages">
           {currentPage > 1 ? (
@@ -339,11 +338,6 @@ function LeaderboardPagination({
           {start.toLocaleString()} - {end.toLocaleString()} of {total.toLocaleString()}
         </span>
       </div>
-
-      <a className="refresh-button" href={pageHref(currentPage)}>
-        <RefreshCw size={14} />
-        Refresh
-      </a>
     </nav>
   );
 }
@@ -536,6 +530,16 @@ export default async function Home({
           <a href="/rules">Rules</a>
           <span>·</span>
           <a href="#leaderboard">Live stats</a>
+          <span>·</span>
+          <a
+            href="https://x.com/HyperJanus"
+            className="footer-social-link"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Follow HyperJanus on X"
+          >
+            <span aria-hidden="true">X</span>
+          </a>
         </div>
       </section>
     </main>
