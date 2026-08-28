@@ -377,11 +377,12 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     icons: {
       icon: [
+        { url: "/favicon.ico", sizes: "50x50", type: "image/x-icon" },
         { url: "/favicon.svg", type: "image/svg+xml" },
         { url: "/brand/chain-bid-logo-50.png", sizes: "50x50", type: "image/png" },
         { url: "/brand/chain-bid-logo-100.png", sizes: "100x100", type: "image/png" },
       ],
-      shortcut: "/brand/chain-bid-logo-50.png",
+      shortcut: "/favicon.ico",
       apple: "/brand/chain-bid-logo-200.png",
     },
   };
