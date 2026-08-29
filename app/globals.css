@@ -2693,11 +2693,11 @@ html[data-theme="light"] .error-line {
 
 @media (max-width: 560px) {
   .global-header {
-    padding: 10px 14px 8px;
+    padding: 8px 12px 6px;
   }
 
   .global-header-inner {
-    gap: 8px;
+    gap: 6px;
   }
 
   .corner-nav {
@@ -2710,14 +2710,14 @@ html[data-theme="light"] .error-line {
 
   .global-header .brand-mark {
     min-width: 0;
-    gap: 7px;
-    font-size: 15px;
+    gap: 6px;
+    font-size: 14px;
     white-space: nowrap;
   }
 
   .global-header .brand-logo {
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
     border-radius: 7px;
   }
 
@@ -2731,9 +2731,9 @@ html[data-theme="light"] .error-line {
   .topbar-links {
     min-width: 0;
     justify-content: flex-end;
-    gap: 10px;
+    gap: 8px;
     overflow-x: auto;
-    font-size: 11px;
+    font-size: 10px;
     scrollbar-width: none;
     white-space: nowrap;
   }
@@ -2743,9 +2743,9 @@ html[data-theme="light"] .error-line {
   }
 
   .theme-toggle {
-    flex: 0 0 28px;
-    width: 28px;
-    height: 28px;
+    flex: 0 0 26px;
+    width: 26px;
+    height: 26px;
   }
 
   .theme-toggle svg {
@@ -2757,18 +2757,18 @@ html[data-theme="light"] .error-line {
     justify-content: center;
     justify-self: stretch;
     width: 100%;
-    gap: 5px;
-    padding: 6px 9px;
-    font-size: 11px;
+    gap: 4px;
+    padding: 5px 8px;
+    font-size: 10px;
   }
 
   .home-layout {
-    padding: 8px 12px 14px;
+    padding: 6px 10px 12px;
   }
 
   .outbid-hero {
-    gap: 8px;
-    padding-bottom: 10px;
+    gap: 6px;
+    padding-bottom: 8px;
   }
 
   .categories-page {
@@ -2899,51 +2899,70 @@ html[data-theme="light"] .error-line {
     display: grid;
     width: 100%;
     max-width: 100%;
-    font-size: clamp(26px, 8vw, 34px);
+    font-size: clamp(23px, 7.2vw, 30px);
+    margin-bottom: 4px;
   }
 
   .title-price-control {
     justify-content: start;
-    gap: 6px;
-    font-size: clamp(24px, 7.2vw, 30px);
+    gap: 5px;
+    font-size: clamp(22px, 6.6vw, 28px);
   }
 
   .title-price-control button {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
+  }
+
+  .outbid-title-block p {
+    font-size: 11px;
+    line-height: 1.26;
+  }
+
+  .outbid-submit-row {
+    gap: 7px;
   }
 
   .outbid-submit-row label,
   .category-dropdown-trigger {
+    min-height: 34px;
     border-radius: 8px;
+    font-size: 12px;
   }
 
   .outbid-submit-button {
+    min-height: 34px;
     border-radius: 8px;
+    font-size: 12px;
+  }
+
+  .outbid-helper {
+    font-size: 11px;
+    line-height: 1.32;
   }
 
   .leaderboard-section {
-    padding-top: 2px;
+    padding-top: 0;
   }
 
   .leaderboard-toolbar {
-    gap: 10px;
-    margin-bottom: 8px;
+    gap: 8px;
+    margin-bottom: 6px;
   }
 
   .manual-check-cta {
-    padding: 6px 9px;
-    font-size: 11px;
+    padding: 5px 8px;
+    font-size: 10px;
   }
 
   .category-bar {
-    margin-bottom: 8px;
-    padding: 6px;
+    margin-bottom: 6px;
+    padding: 5px;
   }
 
   .chip {
-    padding: 7px 10px;
-    font-size: 12px;
+    padding: 6px 9px;
+    font-size: 11px;
   }
 
   .ranked-list {
@@ -3015,23 +3034,26 @@ html[data-theme="light"] .error-line {
   .ranked-card {
     display: grid;
     grid-template-areas:
-      "main action";
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
+      "main"
+      "action";
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
     min-height: 0;
-    gap: 3px 8px;
-    padding: 7px 8px;
+    gap: 7px;
+    padding: 8px;
   }
 
   .rank-card-main {
     display: grid;
     grid-area: main;
     grid-template-areas:
-      "rank project bid"
-      "rank meta meta";
-    grid-template-columns: 36px minmax(0, 1fr) auto;
+      "rank project"
+      "rank meta"
+      "rank bid";
+    grid-template-columns: 36px minmax(0, 1fr);
     align-items: center;
-    gap: 3px 8px;
+    gap: 4px 8px;
+    width: 100%;
   }
 
   .rank-column {
@@ -3056,7 +3078,7 @@ html[data-theme="light"] .error-line {
 
   .rank-project {
     grid-area: project;
-    grid-template-columns: 30px minmax(0, 1fr);
+    grid-template-columns: 28px minmax(0, 1fr);
     gap: 7px;
   }
 
@@ -3066,8 +3088,8 @@ html[data-theme="light"] .error-line {
 
   .rank-project .logo-image,
   .rank-project .logo-token {
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
   }
 
   .project-name {
@@ -3075,7 +3097,7 @@ html[data-theme="light"] .error-line {
     max-width: 100%;
     overflow: hidden;
     margin-bottom: 0;
-    font-size: 13px;
+    font-size: 12px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -3085,7 +3107,7 @@ html[data-theme="light"] .error-line {
     overflow: hidden;
     margin-top: 2px;
     font-size: 10px;
-    line-height: 1.22;
+    line-height: 1.2;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 1;
   }
@@ -3094,7 +3116,7 @@ html[data-theme="light"] .error-line {
     grid-area: meta;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     min-width: 0;
     overflow: hidden;
     white-space: nowrap;
@@ -3110,35 +3132,46 @@ html[data-theme="light"] .error-line {
 
   .rank-bid {
     grid-area: bid;
-    align-self: start;
-    min-width: max-content;
-    gap: 0;
-    text-align: right;
+    display: flex;
+    align-items: baseline;
+    justify-content: flex-start;
+    min-width: 0;
+    gap: 6px;
+    overflow: hidden;
+    text-align: left;
   }
 
   .rank-bid strong {
+    flex: 0 0 auto;
     font-size: 12px;
     white-space: nowrap;
   }
 
   .rank-bid small {
-    display: none;
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .rank-action {
     grid-area: action;
     justify-self: end;
-    width: 26px;
-    min-height: 24px;
-    border-radius: 999px;
-    padding: 0;
-    font-size: 0;
-    gap: 0;
+    width: auto;
+    min-width: 82px;
+    min-height: 28px;
+    max-width: 120px;
+    border-radius: 8px;
+    padding: 0 10px;
+    font-size: 11px;
+    gap: 5px;
   }
 
   .rank-action svg {
-    width: 14px;
-    height: 14px;
+    width: 13px;
+    height: 13px;
   }
 
   .inline-activity {
