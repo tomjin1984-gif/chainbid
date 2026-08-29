@@ -88,8 +88,88 @@ const genericSubdomains = new Set([
   "www",
 ]);
 
+const pathBasedHosts = new Set([
+  "x.com",
+  "twitter.com",
+  "github.com",
+  "gitlab.com",
+  "medium.com",
+  "mirror.xyz",
+  "substack.com",
+]);
+
+const genericNameCompacts = new Set([
+  "app",
+  "home",
+  "homepage",
+  "github",
+  "gitlab",
+  "login",
+  "medium",
+  "mirror",
+  "signin",
+  "signup",
+  "substack",
+  "twitter",
+  "welcome",
+  "website",
+  "officialwebsite",
+  "accessdenied",
+  "attentionrequired",
+  "error",
+  "forbidden",
+  "justamoment",
+  "loading",
+  "notfound",
+  "pagenotfound",
+  "pleasewait",
+  "securitycheck",
+  "verifyingyouarehuman",
+  "x",
+]);
+
+const genericTitlePatterns = [
+  /\bcloudflare\b/i,
+  /\benable javascript\b/i,
+  /\bsecurity check\b/i,
+  /\bverify you are human\b/i,
+];
+
+function titleCaseLabel(value: string) {
+  return value
+    .split(/[-_\s.]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ")
+    .slice(0, 96);
+}
+
+function pathnameName(url: URL) {
+  const segments = url.pathname
+    .split("/")
+    .map((segment) => {
+      try {
+        return decodeURIComponent(segment).replace(/^@/, "").trim();
+      } catch {
+        return segment.replace(/^@/, "").trim();
+      }
+    })
+    .filter(Boolean);
+
+  const usableSegment = segments.find((segment) => /^[a-z0-9][a-z0-9._-]{1,63}$/i.test(segment));
+  return usableSegment ? titleCaseLabel(usableSegment) : "";
+}
+
 function hostnameName(url: URL) {
   const host = url.hostname.replace(/^www\./i, "");
+
+  if (pathBasedHosts.has(host.toLowerCase())) {
+    const pathName = pathnameName(url);
+    if (pathName) {
+      return pathName;
+    }
+  }
+
   const labels = host.split(".").filter(Boolean);
   const firstLabel = labels[0] ?? host;
   const nameLabel =
@@ -97,12 +177,7 @@ function hostnameName(url: URL) {
       ? labels[1]
       : firstLabel;
 
-  return (nameLabel ?? host)
-    .split(/[-_]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ")
-    .slice(0, 96);
+  return titleCaseLabel(nameLabel ?? host);
 }
 
 function compactName(value: string) {
@@ -126,19 +201,11 @@ function isUsableProjectNameCandidate(candidate: string, fallback: string) {
   const cleaned = cleanText(candidate);
   const compactCandidate = compactName(cleaned);
   const compactFallback = compactName(fallback);
-  const genericNames = new Set([
-    "app",
-    "home",
-    "homepage",
-    "login",
-    "signin",
-    "signup",
-    "welcome",
-    "website",
-    "officialwebsite",
-  ]);
-
-  if (cleaned.length < 2 || genericNames.has(compactCandidate)) {
+  if (
+    cleaned.length < 2 ||
+    genericNameCompacts.has(compactCandidate) ||
+    genericTitlePatterns.some((pattern) => pattern.test(cleaned))
+  ) {
     return false;
   }
 

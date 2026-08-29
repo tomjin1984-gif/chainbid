@@ -1973,8 +1973,8 @@ textarea:focus {
 
 .rules-hero {
   display: grid;
-  gap: 22px;
-  margin-bottom: 42px;
+  gap: 18px;
+  margin-bottom: 34px;
 }
 
 .rules-hero .eyebrow,
@@ -1986,34 +1986,34 @@ textarea:focus {
 }
 
 .rules-page h1 {
-  font-size: clamp(48px, 8vw, 72px);
+  font-size: clamp(38px, 6.4vw, 58px);
   line-height: 0.95;
 }
 
 .rules-hero p,
 .rules-page li {
   color: #aeb9c5;
-  font-size: 16px;
-  line-height: 1.65;
+  font-size: 13px;
+  line-height: 1.58;
 }
 
 .rules-page section {
   border-top: 0;
   padding-top: 0;
-  margin-top: 42px;
+  margin-top: 34px;
 }
 
 .rules-page h2 {
   color: #eef4f8;
-  font-size: 22px;
+  font-size: 18px;
   line-height: 1.2;
-  margin-bottom: 16px;
+  margin-bottom: 13px;
 }
 
 .rules-page ul {
   display: grid;
-  gap: 12px;
-  padding-left: 22px;
+  gap: 10px;
+  padding-left: 19px;
 }
 
 .rules-page li::marker {
@@ -2040,8 +2040,8 @@ textarea:focus {
 }
 
 .about-hero {
-  gap: 22px;
-  margin-bottom: 42px;
+  gap: 18px;
+  margin-bottom: 34px;
 }
 
 .about-hero .eyebrow,
@@ -2055,7 +2055,7 @@ textarea:focus {
 }
 
 .about-hero h1 {
-  font-size: clamp(50px, 8vw, 78px);
+  font-size: clamp(40px, 6.4vw, 62px);
   line-height: 0.95;
 }
 
@@ -2063,8 +2063,8 @@ textarea:focus {
 .about-story p,
 .about-section-heading p {
   color: #aeb9c5;
-  font-size: 18px;
-  line-height: 1.7;
+  font-size: 14px;
+  line-height: 1.62;
 }
 
 .about-hero p {
@@ -2072,13 +2072,13 @@ textarea:focus {
 }
 
 .about-story {
-  gap: 22px;
+  gap: 18px;
 }
 
 .about-story h2,
 .about-section-heading h2 {
   color: #eef4f8;
-  font-size: 24px;
+  font-size: 19px;
   line-height: 1.2;
 }
 
@@ -2089,8 +2089,8 @@ textarea:focus {
 .about-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-  margin: 36px 0 42px;
+  gap: 12px;
+  margin: 30px 0 34px;
 }
 
 .about-metrics div,
@@ -2103,21 +2103,21 @@ textarea:focus {
 
 .about-metrics div {
   display: grid;
-  gap: 9px;
-  min-height: 108px;
-  padding: 20px;
+  gap: 8px;
+  min-height: 88px;
+  padding: 16px;
 }
 
 .about-metrics strong {
   color: var(--accent);
   font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 32px;
+  font-size: 26px;
   line-height: 1;
 }
 
 .about-metrics span {
   color: #b7c1ca;
-  font-size: 13px;
+  font-size: 11px;
 }
 
 .about-addresses {
@@ -2158,7 +2158,7 @@ textarea:focus {
 .about-join {
   display: flex;
   justify-content: center;
-  padding-top: 42px;
+  padding-top: 34px;
 }
 
 .manual-check-page {
@@ -2328,9 +2328,9 @@ html[data-theme="light"] .error-line {
 .categories-page {
   display: grid;
   align-content: start;
-  gap: 30px;
-  padding-top: 36px;
-  padding-bottom: 72px;
+  gap: 24px;
+  padding-top: 30px;
+  padding-bottom: 58px;
 }
 
 .categories-hero,
@@ -2342,7 +2342,7 @@ html[data-theme="light"] .error-line {
 
 .categories-hero {
   display: grid;
-  gap: 18px;
+  gap: 14px;
 }
 
 .categories-hero .eyebrow,
@@ -2352,7 +2352,7 @@ html[data-theme="light"] .error-line {
 }
 
 .categories-hero h1 {
-  font-size: clamp(44px, 7vw, 72px);
+  font-size: clamp(35px, 5.6vw, 58px);
   line-height: 0.95;
   letter-spacing: 0;
 }
@@ -2360,8 +2360,8 @@ html[data-theme="light"] .error-line {
 .categories-hero p {
   max-width: 680px;
   color: #aeb9c5;
-  font-size: 17px;
-  line-height: 1.55;
+  font-size: 14px;
+  line-height: 1.48;
 }
 
 .categories-grid {
@@ -2371,16 +2371,16 @@ html[data-theme="light"] .error-line {
 }
 
 .category-card {
-  min-height: 96px;
+  min-height: 78px;
   display: grid;
-  grid-template-columns: 46px minmax(0, 1fr);
+  grid-template-columns: 38px minmax(0, 1fr);
   align-items: center;
-  gap: 16px;
+  gap: 13px;
   border: 1px solid rgba(255, 255, 255, 0.095);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.045);
   color: #eef4f8;
-  padding: 18px 20px;
+  padding: 14px 16px;
   transition:
     border-color 160ms ease,
     background 160ms ease,
@@ -2396,8 +2396,8 @@ html[data-theme="light"] .error-line {
 .category-card-icon {
   display: grid;
   place-items: center;
-  width: 42px;
-  height: 42px;
+  width: 34px;
+  height: 34px;
   border-radius: 999px;
   border: 1px solid rgba(0, 224, 164, 0.14);
   background: rgba(0, 224, 164, 0.095);
@@ -2405,7 +2405,7 @@ html[data-theme="light"] .error-line {
 }
 
 .category-card strong {
-  font-size: 15px;
+  font-size: 12px;
   line-height: 1.28;
 }
 
@@ -2786,34 +2786,34 @@ html[data-theme="light"] .error-line {
   }
 
   .about-hero {
-    gap: 14px;
-    margin-bottom: 30px;
+    gap: 11px;
+    margin-bottom: 24px;
   }
 
   .about-hero h1 {
-    font-size: clamp(42px, 13vw, 56px);
+    font-size: clamp(34px, 10.4vw, 45px);
   }
 
   .about-hero p,
   .about-story p,
   .about-section-heading p {
-    font-size: 15px;
-    line-height: 1.65;
+    font-size: 12px;
+    line-height: 1.55;
   }
 
   .about-story {
-    gap: 18px;
+    gap: 14px;
   }
 
   .about-metrics {
     grid-template-columns: 1fr;
-    gap: 10px;
-    margin: 28px 0 34px;
+    gap: 8px;
+    margin: 22px 0 27px;
   }
 
   .about-metrics div {
-    min-height: 86px;
-    padding: 16px;
+    min-height: 70px;
+    padding: 13px;
   }
 
   .address-card {
@@ -2822,11 +2822,44 @@ html[data-theme="light"] .error-line {
   }
 
   .categories-hero {
-    gap: 14px;
+    gap: 11px;
   }
 
   .categories-hero h1 {
-    font-size: clamp(38px, 12vw, 48px);
+    font-size: clamp(30px, 9.6vw, 38px);
+  }
+
+  .categories-hero p {
+    font-size: 12px;
+  }
+
+  .rules-page {
+    padding-top: 24px;
+    padding-bottom: 62px;
+  }
+
+  .rules-hero {
+    gap: 14px;
+    margin-bottom: 27px;
+  }
+
+  .rules-page h1 {
+    font-size: clamp(34px, 10vw, 46px);
+  }
+
+  .rules-hero p,
+  .rules-page li {
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  .rules-page section {
+    margin-top: 27px;
+  }
+
+  .rules-page h2 {
+    font-size: 16px;
+    margin-bottom: 11px;
   }
 
   .categories-grid {
@@ -2834,8 +2867,8 @@ html[data-theme="light"] .error-line {
   }
 
   .category-card {
-    min-height: 82px;
-    padding: 16px;
+    min-height: 66px;
+    padding: 12px;
   }
 
   .outbid-title-block h1 {

@@ -71,6 +71,25 @@ test("falls back to the domain when metadata title is only a slogan", () => {
   assert.equal(projectDisplayName("Do Only Good Everyday", "https://dogecoin.com"), "Dogecoin");
 });
 
+test("ignores blocked-page titles and keeps the submitted brand", () => {
+  const metadata = extractProjectMetadata(
+    `
+      <title>Access Denied</title>
+      <meta property="og:title" content="Just a moment...">
+      <meta name="description" content="Checking your browser before accessing the site.">
+    `,
+    "https://example-token.fi",
+  );
+
+  assert.equal(metadata.name, "Example Token");
+  assert.equal(projectDisplayName("Cloudflare security check", "https://example-token.fi"), "Example Token");
+});
+
+test("uses profile paths when a generic platform host is submitted", () => {
+  assert.equal(projectDisplayName("X", "https://x.com/HyperJanus"), "HyperJanus");
+  assert.equal(projectDisplayName("GitHub", "https://github.com/uniswap/interface"), "Uniswap");
+});
+
 test("falls back to hostname metadata when fetch fails", async () => {
   const fetcher = async () => {
     throw new Error("network unavailable");

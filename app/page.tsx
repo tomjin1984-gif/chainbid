@@ -417,8 +417,11 @@ export default async function Home({
     activeCategory !== "All" && categories.includes(activeCategory as (typeof categories)[number])
       ? activeCategory
       : "DeFi";
+  const initialClaimCategory = categories.includes(activeCategory as (typeof categories)[number])
+    ? activeCategory
+    : formDefaultCategory;
   const initialClaimAmount =
-    categoryClaimAmounts[formDefaultCategory] ?? claimTopBid(projects).toString();
+    categoryClaimAmounts[initialClaimCategory] ?? claimTopBid(allProjects).toString();
   const totalSiteBidUsdt = allProjects.reduce(
     (total, project) => total + project.totalBidUsdt,
     BigInt(0),
