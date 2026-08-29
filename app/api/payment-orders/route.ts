@@ -1,19 +1,28 @@
 import { z } from "zod";
 import { categories } from "@/lib/seed";
 import { normalizeProjectUrl, slugifyProjectName } from "@/lib/domain/url";
-import { parseBoostTarget, parseWholeUsdt, bidIncrementForTarget } from "@/lib/domain/money";
-import type { SupportedNetwork } from "@/lib/domain/types";
+import {
+  MIN_BID_USDT,
+  parseBoostTarget,
+  parseWholeUsdt,
+  bidIncrementForTarget,
+} from "@/lib/domain/money";
+import type {
+  PaymentOrderRecord,
+  PaymentOrderStatus,
+  ProjectRecord,
+  SupportedNetwork,
+} from "@/lib/domain/types";
 import { assertSafeMetadataUrl } from "@/lib/security/ssrf";
 import { getNetworkConfig } from "@/lib/config/networks";
 import { encodeDevelopmentCheckout } from "@/lib/dev-checkout-token";
-import { createPaymentOrderDraft } from "@/lib/payment/orders";
+import { createPaymentOrderDraft, createPaymentOrderDraftForPublicId } from "@/lib/payment/orders";
 import { buildPaymentPayload, warningForNetwork } from "@/lib/payment/uris";
 import { projectFaviconFallbackUrl, sanitizeProjectIconUrl } from "@/lib/project-icons";
 import { inferProjectMetadataFromUrl } from "@/lib/project-metadata";
 import { getRepository } from "@/lib/repository";
 import { publicPaymentOrder, publicProject } from "@/lib/repository/serializers";
 import type { Repository } from "@/lib/repository/types";
-import type { ProjectRecord } from "@/lib/domain/types";
 import { errorMessage, jsonError, readJson } from "@/lib/http";
 import { checkRateLimit, rateLimitKey } from "@/lib/security/rate-limit";
 import type { NormalizedProjectUrl } from "@/lib/domain/url";
@@ -34,6 +43,13 @@ const orderSchema = z.object({
   bidTotalUsdt: z.union([z.string(), z.number(), z.bigint()]),
   expectedSenderAddress: z.string().max(160).optional().nullable(),
 });
+
+const reusableOrderStatuses: PaymentOrderStatus[] = [
+  "waiting",
+  "detected",
+  "confirming",
+  "confirmed",
+];
 
 function projectMatchesListing(project: ProjectRecord, normalized: NormalizedProjectUrl) {
   const acceptedKeys = new Set([
@@ -86,6 +102,61 @@ function uniqueSlug(baseSlug: string, canonicalKey: string) {
 
   const suffix = hash.toString(36).slice(0, 6);
   return `${baseSlug.slice(0, Math.max(1, 65 - suffix.length))}-${suffix}`;
+}
+
+function readableMinimumTarget(project: ProjectRecord) {
+  return project.totalBidUsdt > BigInt(0)
+    ? project.totalBidUsdt + BigInt(1)
+    : MIN_BID_USDT;
+}
+
+function calculateBidCredit(project: ProjectRecord, requestedTotal: bigint) {
+  if (project.totalBidUsdt === BigInt(0)) {
+    return requestedTotal;
+  }
+
+  try {
+    return bidIncrementForTarget(
+      project.totalBidUsdt,
+      parseBoostTarget(project.totalBidUsdt, requestedTotal),
+    );
+  } catch {
+    throw new Error(
+      `This listing is already at ${project.totalBidUsdt.toString()} USDT. Enter at least ${readableMinimumTarget(project).toString()} USDT as the target total bid.`,
+    );
+  }
+}
+
+async function paymentOrderPayload(
+  order: PaymentOrderRecord,
+  project: ProjectRecord,
+  status = 201,
+) {
+  const network = getNetworkConfig(order.network);
+  const publicOrder = publicPaymentOrder(order);
+  const paymentPayload = buildPaymentPayload(order);
+  const networkPayload = {
+    label: network.label,
+    tokenStandard: network.tokenStandard,
+    warning: warningForNetwork(network.label),
+  };
+  const developmentCheckoutToken = encodeDevelopmentCheckout({
+    project: { name: project.name },
+    order: publicOrder,
+    paymentPayload,
+    network: networkPayload,
+  });
+
+  return Response.json(
+    {
+      project: publicProject(project),
+      order: publicOrder,
+      paymentPayload,
+      network: networkPayload,
+      developmentCheckoutToken,
+    },
+    { status },
+  );
 }
 
 export async function POST(request: Request) {
@@ -172,10 +243,40 @@ export async function POST(request: Request) {
     }
 
     const requestedTotal = parseWholeUsdt(payload.bidTotalUsdt);
-    const bidCreditUsdt =
-      project.totalBidUsdt > BigInt(0)
-        ? bidIncrementForTarget(project.totalBidUsdt, parseBoostTarget(project.totalBidUsdt, requestedTotal))
-        : requestedTotal;
+    const reusableOrder = await repository.findOpenPaymentOrderForProject({
+      projectId: project.id,
+      statuses: reusableOrderStatuses,
+    });
+
+    if (reusableOrder) {
+      let order = reusableOrder;
+
+      if (reusableOrder.status === "waiting") {
+        try {
+          const draft = createPaymentOrderDraftForPublicId({
+            publicId: reusableOrder.publicId,
+            projectId: project.id,
+            network: payload.network as SupportedNetwork,
+            bidCreditUsdt: calculateBidCredit(project, requestedTotal),
+            expectedSenderAddress: payload.expectedSenderAddress,
+          });
+          order = (await repository.updateWaitingPaymentOrderNetwork(
+            reusableOrder.publicId,
+            draft,
+          )) ?? reusableOrder;
+        } catch {
+          order = reusableOrder;
+        }
+      } else if (reusableOrder.status === "confirmed") {
+        const credited = await repository.creditPaymentOrder(reusableOrder.publicId);
+        order = credited.order ?? reusableOrder;
+        project = (await repository.getProjectById(project.id)) ?? project;
+      }
+
+      return paymentOrderPayload(order, project, 200);
+    }
+
+    const bidCreditUsdt = calculateBidCredit(project, requestedTotal);
 
     const draft = createPaymentOrderDraft({
       projectId: project.id,
@@ -184,32 +285,7 @@ export async function POST(request: Request) {
       expectedSenderAddress: payload.expectedSenderAddress,
     });
     const order = await repository.createPaymentOrder(draft);
-    const network = getNetworkConfig(order.network);
-    const publicOrder = publicPaymentOrder(order);
-    const publicProjectPayload = publicProject(project);
-    const paymentPayload = buildPaymentPayload(order);
-    const networkPayload = {
-      label: network.label,
-      tokenStandard: network.tokenStandard,
-      warning: warningForNetwork(network.label),
-    };
-    const developmentCheckoutToken = encodeDevelopmentCheckout({
-      project: { name: project.name },
-      order: publicOrder,
-      paymentPayload,
-      network: networkPayload,
-    });
-
-    return Response.json(
-      {
-        project: publicProjectPayload,
-        order: publicOrder,
-        paymentPayload,
-        network: networkPayload,
-        developmentCheckoutToken,
-      },
-      { status: 201 },
-    );
+    return paymentOrderPayload(order, project);
   } catch (error) {
     return jsonError(errorMessage(error), 400);
   }

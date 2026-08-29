@@ -160,6 +160,27 @@ export class SupabaseRestRepository implements Repository {
     return rows[0] ? paymentOrderFromRow(rows[0]) : null;
   }
 
+  async findOpenPaymentOrderForProject(args: {
+    projectId: string;
+    statuses: PaymentOrderStatus[];
+  }) {
+    const rows = await supabaseFetch<Row[]>(
+      `/rest/v1/payment_orders?select=*&project_id=eq.${encodeURIComponent(
+        args.projectId,
+      )}&status=in.(${args.statuses.join(",")})&order=created_at.desc&limit=20`,
+      { method: "GET" },
+    );
+    const now = Date.now();
+    const order = rows
+      .map(paymentOrderFromRow)
+      .find((payment) => (
+        payment.status !== "waiting" ||
+        new Date(payment.expiresAt).getTime() >= now
+      ));
+
+    return order ?? null;
+  }
+
   async findPaymentOrdersByTxHash(txHash: string) {
     const rows = await supabaseFetch<Row[]>(
       `/rest/v1/payment_orders?select=*&tx_hash=eq.${encodeURIComponent(txHash)}&order=created_at.desc&limit=20`,
@@ -177,6 +198,7 @@ export class SupabaseRestRepository implements Repository {
           network: draft.network,
           receiver_address: draft.receiverAddress,
           token_contract_or_mint: draft.tokenContractOrMint,
+          bid_credit_usdt: draft.bidCreditUsdt.toString(),
           expected_transfer_amount_atomic: draft.expectedTransferAmountAtomic.toString(),
           expected_transfer_amount_display: draft.expectedTransferAmountDisplay,
           expected_sender_address: draft.expectedSenderAddress,

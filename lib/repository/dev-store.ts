@@ -177,6 +177,22 @@ class DevRepository implements Repository {
     return this.payments.get(publicId) ?? null;
   }
 
+  async findOpenPaymentOrderForProject(args: {
+    projectId: string;
+    statuses: PaymentOrderStatus[];
+  }) {
+    const now = Date.now();
+    return [...this.payments.values()]
+      .filter((payment) => (
+        payment.projectId === args.projectId &&
+        args.statuses.includes(payment.status) &&
+        (payment.status !== "waiting" || new Date(payment.expiresAt).getTime() >= now)
+      ))
+      .sort((a, b) => (
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      ))[0] ?? null;
+  }
+
   async findPaymentOrdersByTxHash(txHash: string) {
     return [...this.payments.values()].filter((payment) => payment.txHash === txHash);
   }
@@ -192,6 +208,7 @@ class DevRepository implements Repository {
       network: draft.network,
       receiverAddress: draft.receiverAddress,
       tokenContractOrMint: draft.tokenContractOrMint,
+      bidCreditUsdt: draft.bidCreditUsdt,
       expectedTransferAmountAtomic: draft.expectedTransferAmountAtomic,
       expectedTransferAmountDisplay: draft.expectedTransferAmountDisplay,
       expectedSenderAddress: draft.expectedSenderAddress,

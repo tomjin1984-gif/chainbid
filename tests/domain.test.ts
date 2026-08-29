@@ -379,6 +379,50 @@ test("confirmed payment orders credit without another RPC lookup", async () => {
   assert.equal((await devRepository.getPaymentOrder(order.publicId))?.status, "credited");
 });
 
+test("reuses a waiting payment order for the same project and can refresh its payable amount", async () => {
+  const project = await devRepository.createProject({
+    canonicalListingKey: "reusable-order.example",
+    slug: "reusable-order-example",
+    name: "Reusable Order",
+    url: "https://reusable-order.example",
+    description: "Reusable payment order test project.",
+    category: "DeFi",
+    logoUrl: null,
+    xUrl: null,
+  });
+  const draft = createPaymentOrderDraft({
+    projectId: project.id,
+    network: "tron",
+    bidCreditUsdt: BigInt(5),
+  });
+  const order = await devRepository.createPaymentOrder(draft);
+
+  const reusable = await devRepository.findOpenPaymentOrderForProject({
+    projectId: project.id,
+    statuses: ["waiting", "detected", "confirming", "confirmed"],
+  });
+  assert.equal(reusable?.publicId, order.publicId);
+
+  const updatedDraft = createPaymentOrderDraftForPublicId({
+    publicId: order.publicId,
+    projectId: project.id,
+    network: "bsc",
+    bidCreditUsdt: BigInt(8),
+  });
+  const updated = await devRepository.updateWaitingPaymentOrderNetwork(
+    order.publicId,
+    updatedDraft,
+  );
+
+  assert.equal(updated?.publicId, order.publicId);
+  assert.equal(updated?.network, "bsc");
+  assert.equal(updated?.bidCreditUsdt, BigInt(8));
+  assert.equal(
+    updated?.expectedTransferAmountAtomic,
+    updatedDraft.expectedTransferAmountAtomic,
+  );
+});
+
 test("evm verifier can discover a matching recent USDT transfer without a hash", async () => {
   const originalFetch = globalThis.fetch;
   const originalRpc = process.env.BSC_RPC_URL;

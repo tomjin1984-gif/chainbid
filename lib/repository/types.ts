@@ -30,6 +30,10 @@ export interface Repository {
   listBidsForProject(projectId: string): Promise<BidRecord[]>;
   createPaymentOrder(draft: PaymentOrderDraft): Promise<PaymentOrderRecord>;
   getPaymentOrder(publicId: string): Promise<PaymentOrderRecord | null>;
+  findOpenPaymentOrderForProject(args: {
+    projectId: string;
+    statuses: PaymentOrderStatus[];
+  }): Promise<PaymentOrderRecord | null>;
   findPaymentOrdersByTxHash(txHash: string): Promise<PaymentOrderRecord[]>;
   updateWaitingPaymentOrderNetwork(
     publicId: string,
