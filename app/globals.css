@@ -491,7 +491,7 @@ h2 {
 }
 
 .home-layout {
-  padding: 14px 20px;
+  padding: 10px 16px;
 }
 
 .compact-hero,
@@ -662,14 +662,15 @@ h2 {
 }
 
 .leaderboard-section {
-  padding: 8px 0 12px;
+  max-width: 1040px;
+  padding: 4px 0 10px;
 }
 
 .leaderboard-toolbar {
   justify-content: space-between;
   align-items: center;
-  gap: 18px;
-  margin-bottom: 12px;
+  gap: 14px;
+  margin-bottom: 8px;
 }
 
 .leaderboard-toolbar .eyebrow {
@@ -683,8 +684,8 @@ h2 {
   border: 1px solid var(--line);
   border-radius: 999px;
   color: #c5d0d9;
-  padding: 7px 11px;
-  font-size: 12px;
+  padding: 6px 10px;
+  font-size: 11px;
   font-weight: 720;
   background: rgba(255, 255, 255, 0.035);
   transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
@@ -700,13 +701,13 @@ h2 {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.025);
-  margin-bottom: 12px;
-  padding: 8px;
+  margin-bottom: 8px;
+  padding: 6px;
 }
 
 .ranked-list {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .rank-section-divider {
@@ -736,12 +737,12 @@ h2 {
 
 .ranked-card {
   position: relative;
-  min-height: 84px;
-  gap: 14px;
+  min-height: 68px;
+  gap: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.04);
-  padding: 12px 14px;
+  padding: 9px 12px;
   overflow: hidden;
   cursor: pointer;
 }
@@ -751,7 +752,7 @@ h2 {
   align-items: center;
   flex: 1 1 auto;
   min-width: 0;
-  gap: 14px;
+  gap: 10px;
   color: inherit;
   text-decoration: none;
   border-radius: inherit;
@@ -811,18 +812,18 @@ h2 {
 }
 
 .rank-column {
-  width: 66px;
-  flex: 0 0 66px;
+  width: 54px;
+  flex: 0 0 54px;
 }
 
 .rank-badge {
   justify-content: center;
-  gap: 5px;
-  width: 58px;
-  height: 34px;
+  gap: 4px;
+  width: 48px;
+  height: 28px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 850;
 }
 
@@ -834,8 +835,8 @@ h2 {
 
 .rank-project {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr);
-  gap: 11px;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 9px;
   align-items: center;
   min-width: 0;
   flex: 1 1 auto;
@@ -843,11 +844,25 @@ h2 {
   outline: none;
 }
 
+.rank-project .logo-image,
+.rank-project .logo-token {
+  width: 34px;
+  height: 34px;
+}
+
+.project-name {
+  font-size: 13px;
+}
+
 .rank-project p {
+  display: -webkit-box;
+  overflow: hidden;
   margin: 0;
   color: #aeb9c5;
-  font-size: 12px;
-  line-height: 1.42;
+  font-size: 11px;
+  line-height: 1.32;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .rank-card-main:hover .project-name,
@@ -863,25 +878,33 @@ h2 {
 .rank-meta,
 .rank-bid {
   display: grid;
-  gap: 5px;
-  min-width: 120px;
+  gap: 3px;
+  min-width: 105px;
 }
 
 .rank-meta span {
   color: #d7e1ea;
+  font-size: 12px;
+}
+
+.rank-meta small,
+.rank-bid small {
+  font-size: 11px;
 }
 
 .rank-bid {
-  min-width: 170px;
+  min-width: 145px;
   text-align: right;
 }
 
 .rank-bid strong {
-  font-size: 18px;
+  font-size: 15px;
 }
 
 .rank-action {
   white-space: nowrap;
+  min-height: 28px;
+  padding: 0 9px;
 }
 
 .latest-activity-strip {
@@ -1183,12 +1206,12 @@ h2 {
 
 .outbid-hero {
   width: 100%;
-  max-width: 1080px;
+  max-width: 1000px;
   margin: 0 auto;
   display: grid;
   align-content: start;
-  gap: 10px;
-  padding: 0 0 14px;
+  gap: 8px;
+  padding: 0 0 10px;
 }
 
 .outbid-hero > * {
@@ -1207,14 +1230,14 @@ h2 {
   justify-self: center;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   max-width: 100%;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.05);
   color: #c5d0d9;
-  padding: 7px 12px;
-  font-size: 13px;
+  padding: 6px 10px;
+  font-size: 12px;
   line-height: 1;
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.18);
 }
@@ -1228,8 +1251,8 @@ h2 {
 }
 
 .online-dot {
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   border-radius: 999px;
   background: var(--accent);
   box-shadow: 0 0 16px rgba(0, 224, 164, 0.85);
@@ -1239,29 +1262,29 @@ h2 {
   display: grid;
   justify-items: center;
   text-align: center;
-  padding-top: clamp(4px, 0.9vh, 12px);
+  padding-top: clamp(0px, 0.5vh, 6px);
 }
 
 .outbid-title-block h1 {
   width: 100%;
-  max-width: 960px;
+  max-width: 860px;
   min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 10px;
-  font-size: clamp(32px, 3.35vw, 50px);
+  gap: 8px;
+  font-size: clamp(28px, 2.75vw, 42px);
   line-height: 0.98;
   letter-spacing: 0;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .outbid-title-block p {
-  max-width: 720px;
+  max-width: 680px;
   color: #b8c4ce;
-  font-size: 15px;
-  line-height: 1.36;
+  font-size: 13px;
+  line-height: 1.32;
   margin-bottom: 0;
 }
 
@@ -1273,7 +1296,7 @@ h2 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
+  gap: 7px;
   max-width: 100%;
   min-width: 0;
   color: var(--accent);
@@ -1282,8 +1305,8 @@ h2 {
 .title-price-control button {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border: 1px solid rgba(0, 224, 164, 0.22);
   border-radius: 999px;
   background: rgba(0, 224, 164, 0.1);
@@ -1302,11 +1325,11 @@ h2 {
 
 .outbid-submit-row {
   display: grid;
-  grid-template-columns: minmax(260px, 1.9fr) minmax(220px, 0.95fr) auto;
-  gap: 12px;
+  grid-template-columns: minmax(240px, 1.9fr) minmax(200px, 0.95fr) auto;
+  gap: 10px;
   align-items: center;
   min-width: 0;
-  width: min(100%, 860px);
+  width: min(100%, 800px);
   max-width: 100%;
   justify-self: center;
   margin-top: 0;
@@ -1316,14 +1339,15 @@ h2 {
 .category-dropdown-trigger {
   position: relative;
   min-width: 0;
-  min-height: 42px;
+  min-height: 38px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.045);
-  padding: 0 15px;
+  padding: 0 13px;
+  font-size: 13px;
 }
 
 .category-dropdown {
@@ -1382,7 +1406,7 @@ h2 {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  min-height: 36px;
+  min-height: 32px;
   border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
@@ -1481,16 +1505,16 @@ h2 {
 }
 
 .outbid-submit-button {
-  min-height: 42px;
+  min-height: 38px;
   border-radius: 999px;
-  padding: 0 20px;
+  padding: 0 16px;
 }
 
 .outbid-helper {
   justify-self: center;
   max-width: 700px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
   text-align: center;
   margin: -4px 0 0;
 }
@@ -2498,11 +2522,11 @@ html[data-theme="light"] .error-line {
   .outbid-title-block h1 {
     justify-content: flex-start;
     gap: 9px;
-    font-size: clamp(32px, 9.4vw, 48px);
+    font-size: clamp(28px, 8.4vw, 42px);
   }
 
   .outbid-title-block p {
-    font-size: 14px;
+    font-size: 12px;
   }
 
   .outbid-submit-row {
@@ -2734,8 +2758,8 @@ html[data-theme="light"] .error-line {
     justify-self: stretch;
     width: 100%;
     gap: 5px;
-    padding: 7px 10px;
-    font-size: 12px;
+    padding: 6px 9px;
+    font-size: 11px;
   }
 
   .home-layout {
@@ -2875,18 +2899,18 @@ html[data-theme="light"] .error-line {
     display: grid;
     width: 100%;
     max-width: 100%;
-    font-size: clamp(30px, 9vw, 40px);
+    font-size: clamp(26px, 8vw, 34px);
   }
 
   .title-price-control {
     justify-content: start;
-    gap: 7px;
-    font-size: clamp(28px, 8vw, 34px);
+    gap: 6px;
+    font-size: clamp(24px, 7.2vw, 30px);
   }
 
   .title-price-control button {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
   }
 
   .outbid-submit-row label,
@@ -2995,8 +3019,8 @@ html[data-theme="light"] .error-line {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     min-height: 0;
-    gap: 4px 9px;
-    padding: 9px 10px;
+    gap: 3px 8px;
+    padding: 7px 8px;
   }
 
   .rank-card-main {
@@ -3005,23 +3029,23 @@ html[data-theme="light"] .error-line {
     grid-template-areas:
       "rank project bid"
       "rank meta meta";
-    grid-template-columns: 40px minmax(0, 1fr) auto;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
     align-items: center;
-    gap: 4px 9px;
+    gap: 3px 8px;
   }
 
   .rank-column {
     grid-area: rank;
     align-self: start;
-    width: 40px;
+    width: 36px;
     padding-top: 1px;
   }
 
   .rank-badge {
-    width: 36px;
-    height: 26px;
+    width: 32px;
+    height: 24px;
     border-radius: 999px;
-    font-size: 11px;
+    font-size: 10px;
     gap: 3px;
   }
 
@@ -3032,8 +3056,8 @@ html[data-theme="light"] .error-line {
 
   .rank-project {
     grid-area: project;
-    grid-template-columns: 34px minmax(0, 1fr);
-    gap: 8px;
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 7px;
   }
 
   .rank-project > div {
@@ -3042,8 +3066,8 @@ html[data-theme="light"] .error-line {
 
   .rank-project .logo-image,
   .rank-project .logo-token {
-    width: 34px;
-    height: 34px;
+    width: 30px;
+    height: 30px;
   }
 
   .project-name {
@@ -3051,7 +3075,7 @@ html[data-theme="light"] .error-line {
     max-width: 100%;
     overflow: hidden;
     margin-bottom: 0;
-    font-size: 14px;
+    font-size: 13px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -3060,8 +3084,8 @@ html[data-theme="light"] .error-line {
     display: -webkit-box;
     overflow: hidden;
     margin-top: 2px;
-    font-size: 11px;
-    line-height: 1.25;
+    font-size: 10px;
+    line-height: 1.22;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 1;
   }
@@ -3080,7 +3104,7 @@ html[data-theme="light"] .error-line {
   .rank-meta small {
     min-width: 0;
     overflow: hidden;
-    font-size: 11px;
+    font-size: 10px;
     text-overflow: ellipsis;
   }
 
@@ -3093,7 +3117,7 @@ html[data-theme="light"] .error-line {
   }
 
   .rank-bid strong {
-    font-size: 13px;
+    font-size: 12px;
     white-space: nowrap;
   }
 
@@ -3104,8 +3128,8 @@ html[data-theme="light"] .error-line {
   .rank-action {
     grid-area: action;
     justify-self: end;
-    width: 28px;
-    min-height: 26px;
+    width: 26px;
+    min-height: 24px;
     border-radius: 999px;
     padding: 0;
     font-size: 0;

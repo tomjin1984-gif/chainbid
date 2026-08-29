@@ -98,6 +98,12 @@ const pathBasedHosts = new Set([
   "substack.com",
 ]);
 
+const brandNameByHost = new Map<string, string>([
+  ["chain.link", "Chainlink"],
+  ["fin.news", "Fin.news"],
+  ["0x.news", "0x.news"],
+]);
+
 const genericNameCompacts = new Set([
   "app",
   "home",
@@ -162,6 +168,11 @@ function pathnameName(url: URL) {
 
 function hostnameName(url: URL) {
   const host = url.hostname.replace(/^www\./i, "");
+  const brandName = brandNameByHost.get(host.toLowerCase());
+
+  if (brandName) {
+    return brandName;
+  }
 
   if (pathBasedHosts.has(host.toLowerCase())) {
     const pathName = pathnameName(url);
@@ -233,7 +244,13 @@ function chooseProjectName(candidates: string[], fallback: string) {
 
 export function projectDisplayName(storedName: string, projectUrl: string) {
   try {
-    const fallback = hostnameName(new URL(projectUrl));
+    const url = new URL(projectUrl);
+    const brandName = brandNameByHost.get(url.hostname.replace(/^www\./i, "").toLowerCase());
+    if (brandName) {
+      return brandName;
+    }
+
+    const fallback = hostnameName(url);
     return chooseProjectName([storedName], fallback);
   } catch {
     return cleanText(storedName).slice(0, 96) || "Project";
@@ -365,8 +382,9 @@ function responseLooksLikeHtml(response: Response) {
 
 export function extractProjectMetadata(html: string, projectUrl: string) {
   const url = new URL(projectUrl);
+  const brandName = brandNameByHost.get(url.hostname.replace(/^www\./i, "").toLowerCase());
   const fallbackName = hostnameName(url);
-  const name = chooseProjectName(
+  const name = brandName ?? chooseProjectName(
     [
       readMetaContent(html, ["og:title", "twitter:title"]),
       readTitle(html),

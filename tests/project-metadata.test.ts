@@ -90,6 +90,21 @@ test("uses profile paths when a generic platform host is submitted", () => {
   assert.equal(projectDisplayName("GitHub", "https://github.com/uniswap/interface"), "Uniswap");
 });
 
+test("uses known Web3 domain brands when stored titles are incomplete", () => {
+  const metadata = extractProjectMetadata(
+    `
+      <title>Chain</title>
+      <meta name="description" content="Oracle infrastructure connecting smart contracts with off-chain data.">
+    `,
+    "https://chain.link",
+  );
+
+  assert.equal(metadata.name, "Chainlink");
+  assert.equal(projectDisplayName("Chain", "https://chain.link"), "Chainlink");
+  assert.equal(projectDisplayName("Fin", "https://fin.news"), "Fin.news");
+  assert.equal(projectDisplayName("0x", "https://0x.news"), "0x.news");
+});
+
 test("falls back to hostname metadata when fetch fails", async () => {
   const fetcher = async () => {
     throw new Error("network unavailable");
