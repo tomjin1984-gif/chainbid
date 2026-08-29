@@ -31,6 +31,7 @@ export const metadata = {
 
 const categoryIcons: Record<Exclude<Category, "All">, LucideIcon> = {
   "AI x Crypto": BrainCircuit,
+  TradFi: Coins,
   DeFi: Landmark,
   Memecoins: Gem,
   Infrastructure: Network,

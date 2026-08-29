@@ -1,6 +1,7 @@
 export type Category =
   | "All"
   | "AI x Crypto"
+  | "TradFi"
   | "DeFi"
   | "Memecoins"
   | "Infrastructure"
@@ -35,6 +36,7 @@ export interface LeaderboardProject {
 export const categories: Category[] = [
   "All",
   "AI x Crypto",
+  "TradFi",
   "DeFi",
   "Memecoins",
   "Infrastructure",

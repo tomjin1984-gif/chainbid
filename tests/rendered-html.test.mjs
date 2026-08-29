@@ -75,6 +75,7 @@ test("server-renders the categories page", async () => {
   assert.match(html, /Categories/);
   assert.match(html, /Every category has its own ranking/);
   assert.match(html, /AI x Crypto/);
+  assert.match(html, /TradFi/);
   assert.match(html, /Prediction Markets/);
   assert.match(html, /Live stats/);
 });

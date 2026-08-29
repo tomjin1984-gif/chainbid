@@ -346,6 +346,7 @@ $$;
 
 insert into categories (slug, name) values
   ('ai-x-crypto', 'AI x Crypto'),
+  ('tradfi', 'TradFi'),
   ('defi', 'DeFi'),
   ('memecoins', 'Memecoins'),
   ('infrastructure', 'Infrastructure'),
