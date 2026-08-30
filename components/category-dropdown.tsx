@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { categories } from "@/lib/seed";
 
 const categoryOptions = categories.filter((category) => category !== "All");
+const categoryChangeEvent = "chainbid:category-change";
 
 export function CategoryDropdown({
   defaultValue = "DeFi",
@@ -18,6 +19,13 @@ export function CategoryDropdown({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    function handleCategoryChange(event: Event) {
+      const category = (event as CustomEvent<{ category?: string }>).detail?.category;
+      if (category && category !== "All" && categoryOptions.includes(category as never)) {
+        setSelected(category);
+      }
+    }
+
     function handlePointerDown(event: PointerEvent) {
       if (!dropdownRef.current?.contains(event.target as Node)) {
         setOpen(false);
@@ -30,10 +38,12 @@ export function CategoryDropdown({
       }
     }
 
+    window.addEventListener(categoryChangeEvent, handleCategoryChange);
     document.addEventListener("pointerdown", handlePointerDown);
     document.addEventListener("keydown", handleKeyDown);
 
     return () => {
+      window.removeEventListener(categoryChangeEvent, handleCategoryChange);
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
