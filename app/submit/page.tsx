@@ -44,7 +44,8 @@ export default async function SubmitPage({
                 id: boostProject.id,
                 name: boostProject.name,
                 domain: new URL(boostProject.url).hostname,
-                currentBidUsdt: formatUsdt(boostProject.totalBidUsdt),
+                currentBidUsdt: boostProject.totalBidUsdt.toString(),
+                currentBidDisplay: formatUsdt(boostProject.totalBidUsdt),
               }
             : null
         }

@@ -17,6 +17,7 @@ interface BoostProject {
   name: string;
   domain: string;
   currentBidUsdt: string;
+  currentBidDisplay: string;
 }
 
 function formatFieldList(fields: string[]) {
@@ -57,11 +58,20 @@ export function SubmitForm({
   defaultUrl?: string;
   defaultCategory?: string;
 }) {
-  const minimumTarget = boostProject ? defaultTarget : null;
+  const currentBoostTotal = boostProject ? parseWholeUsdtInput(boostProject.currentBidUsdt) : null;
+  const defaultBoostTarget = boostProject && defaultTarget ? parseWholeUsdtInput(defaultTarget) : null;
+  const minimumBoostAmount =
+    boostProject && currentBoostTotal
+      ? defaultBoostTarget && defaultBoostTarget > currentBoostTotal
+        ? defaultBoostTarget - currentBoostTotal
+        : BigInt(1)
+      : null;
   const [network, setNetwork] = useState<NetworkOption["network"]>(
     networks.find((item) => item.enabled)?.network ?? "tron",
   );
-  const [bid, setBid] = useState(defaultTarget ?? "5");
+  const [bid, setBid] = useState(
+    boostProject ? (minimumBoostAmount?.toString() ?? "1") : (defaultTarget ?? "5"),
+  );
   const [url, setUrl] = useState(defaultUrl ?? "");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -96,15 +106,24 @@ export function SubmitForm({
     }
 
     const bidAmount = parseWholeUsdtInput(bid);
-    if (!bidAmount || bidAmount < BigInt(5)) {
-      setStatus("Please enter a whole USDT amount of at least 5.");
+    const minimumInputAmount = boostProject ? BigInt(1) : BigInt(5);
+    if (!bidAmount || bidAmount < minimumInputAmount) {
+      setStatus(
+        boostProject
+          ? "Please enter a whole USDT boost amount of at least 1."
+          : "Please enter a whole USDT amount of at least 5.",
+      );
       return;
     }
 
-    if (minimumTarget) {
-      const minimumAmount = parseWholeUsdtInput(minimumTarget);
-      if (minimumAmount && bidAmount < minimumAmount) {
-        setStatus(`Enter at least ${formatWholeUsdt(minimumAmount)} for this boost. You can enter any higher amount.`);
+    if (boostProject) {
+      if (!currentBoostTotal) {
+        setStatus("This listing cannot be boosted right now. Please refresh and try again.");
+        return;
+      }
+
+      if (minimumBoostAmount && bidAmount < minimumBoostAmount) {
+        setStatus(`Enter at least ${formatWholeUsdt(minimumBoostAmount)} for this boost. You can enter any higher amount.`);
         return;
       }
     }
@@ -112,12 +131,20 @@ export function SubmitForm({
     setBusy(true);
 
     try {
+      const boostTargetTotal =
+        boostProject && currentBoostTotal ? currentBoostTotal + bidAmount : bidAmount;
+      const minimumBoostTarget =
+        boostProject && currentBoostTotal && minimumBoostAmount
+          ? currentBoostTotal + minimumBoostAmount
+          : null;
       const body = boostProject
           ? {
               projectId: boostProject.id,
               network,
-              bidTotalUsdt: bid,
-              ...(minimumTarget ? { minimumBidTotalUsdt: minimumTarget } : {}),
+              bidTotalUsdt: boostTargetTotal.toString(),
+              ...(minimumBoostTarget
+                ? { minimumBidTotalUsdt: minimumBoostTarget.toString() }
+                : {}),
             }
           : {
               project: {
@@ -179,7 +206,7 @@ export function SubmitForm({
         {boostProject ? (
           <div className="boost-summary">
             <span>{boostProject.name}</span>
-            <strong>{boostProject.currentBidUsdt}</strong>
+            <strong>{boostProject.currentBidDisplay}</strong>
             <small>{boostProject.domain}</small>
           </div>
         ) : (
@@ -213,9 +240,14 @@ export function SubmitForm({
 
         <div className="field-stack">
           <label>
-            {boostProject ? "Target Total Bid" : "Initial Bid"}
+            {boostProject ? "Boost Amount" : "Initial Bid"}
             <input value={bid} onChange={(event) => setBid(event.target.value)} inputMode="numeric" />
           </label>
+          {boostProject && currentBoostTotal ? (
+            <p className="field-help">
+              This adds to the current bid. Final total: {formatWholeUsdt(currentBoostTotal + (parseWholeUsdtInput(bid) ?? BigInt(0)))}.
+            </p>
+          ) : null}
         </div>
 
         <div className="network-picker" aria-label="USDT network">
