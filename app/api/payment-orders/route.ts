@@ -7,14 +7,13 @@ import {
 } from "@/lib/domain/money";
 import type {
   PaymentOrderRecord,
-  PaymentOrderStatus,
   ProjectRecord,
   SupportedNetwork,
 } from "@/lib/domain/types";
 import { assertSafeMetadataUrl } from "@/lib/security/ssrf";
 import { getNetworkConfig } from "@/lib/config/networks";
 import { encodeDevelopmentCheckout } from "@/lib/dev-checkout-token";
-import { createPaymentOrderDraft, createPaymentOrderDraftForPublicId } from "@/lib/payment/orders";
+import { createPaymentOrderDraft } from "@/lib/payment/orders";
 import { buildPaymentPayload, warningForNetwork } from "@/lib/payment/uris";
 import { projectFaviconFallbackUrl, sanitizeProjectIconUrl } from "@/lib/project-icons";
 import { inferProjectMetadataFromUrl } from "@/lib/project-metadata";
@@ -42,13 +41,6 @@ const orderSchema = z.object({
   minimumBidTotalUsdt: z.union([z.string(), z.number(), z.bigint()]).optional(),
   expectedSenderAddress: z.string().max(160).optional().nullable(),
 });
-
-const reusableOrderStatuses: PaymentOrderStatus[] = [
-  "waiting",
-  "detected",
-  "confirming",
-  "confirmed",
-];
 
 function projectMatchesListing(project: ProjectRecord, normalized: NormalizedProjectUrl) {
   const acceptedKeys = new Set([
@@ -253,35 +245,6 @@ export async function POST(request: Request) {
     const requestedMinimumTotal = payload.minimumBidTotalUsdt
       ? parseWholeUsdt(payload.minimumBidTotalUsdt)
       : null;
-    const reusableOrder = await repository.findOpenPaymentOrderForProject({
-      projectId: project.id,
-      statuses: reusableOrderStatuses,
-    });
-
-    if (reusableOrder) {
-      let order = reusableOrder;
-
-      if (reusableOrder.status === "waiting") {
-        const draft = createPaymentOrderDraftForPublicId({
-          publicId: reusableOrder.publicId,
-          projectId: project.id,
-          network: payload.network as SupportedNetwork,
-          bidCreditUsdt: calculateBidCredit(project, requestedTotal, requestedMinimumTotal),
-          expectedSenderAddress: payload.expectedSenderAddress,
-        });
-        order = (await repository.updateWaitingPaymentOrderNetwork(
-          reusableOrder.publicId,
-          draft,
-        )) ?? reusableOrder;
-      } else if (reusableOrder.status === "confirmed") {
-        const credited = await repository.creditPaymentOrder(reusableOrder.publicId);
-        order = credited.order ?? reusableOrder;
-        project = (await repository.getProjectById(project.id)) ?? project;
-      }
-
-      return paymentOrderPayload(order, project, 200);
-    }
-
     const bidCreditUsdt = calculateBidCredit(project, requestedTotal, requestedMinimumTotal);
 
     const draft = createPaymentOrderDraft({

@@ -20,6 +20,7 @@ import { EvmUsdtVerifier } from "../lib/payment/verifiers/evm";
 import { SolanaUsdtVerifier } from "../lib/payment/verifiers/solana";
 import { TronUsdtVerifier } from "../lib/payment/verifiers/tron";
 import { devRepository } from "../lib/repository/dev-store";
+import { POST as createPaymentOrder } from "../app/api/payment-orders/route";
 import type { PaymentVerifier, VerificationResult } from "../lib/payment/types";
 import type { PaymentOrderRecord } from "../lib/domain/types";
 
@@ -422,6 +423,51 @@ test("reuses a waiting payment order for the same project and can refresh its pa
   assert.equal(
     updated?.expectedTransferAmountAtomic,
     updatedDraft.expectedTransferAmountAtomic,
+  );
+});
+
+test("creates a fresh payment order for each boost attempt", async () => {
+  const project = await devRepository.getProjectBySlug("uniswap");
+  if (!project) {
+    throw new Error("Expected seeded Uniswap project.");
+  }
+  const boostProject = project;
+
+  async function createBoostOrder() {
+    const response = await createPaymentOrder(
+      new Request("http://localhost/api/payment-orders", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          projectId: boostProject.id,
+          network: "tron",
+          bidTotalUsdt: (boostProject.totalBidUsdt + BigInt(100)).toString(),
+          minimumBidTotalUsdt: (boostProject.totalBidUsdt + BigInt(1)).toString(),
+        }),
+      }),
+    );
+
+    assert.equal(response.status, 201);
+    const payload = await response.json() as {
+      order?: {
+        publicId: string;
+        bidCreditUsdt: string;
+        expectedTransferAmountDisplay: string;
+      };
+    };
+    assert.ok(payload.order);
+    return payload.order;
+  }
+
+  const first = await createBoostOrder();
+  const second = await createBoostOrder();
+
+  assert.notEqual(second.publicId, first.publicId);
+  assert.equal(first.bidCreditUsdt, "100");
+  assert.equal(second.bidCreditUsdt, "100");
+  assert.notEqual(
+    second.expectedTransferAmountDisplay,
+    first.expectedTransferAmountDisplay,
   );
 });
 
