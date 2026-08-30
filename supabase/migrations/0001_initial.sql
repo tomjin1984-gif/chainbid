@@ -65,7 +65,7 @@ create table payment_orders (
   network supported_network not null,
   receiver_address text not null,
   token_contract_or_mint text not null,
-  bid_credit_usdt bigint not null check (bid_credit_usdt >= 1 and bid_credit_usdt <= 999999),
+  bid_credit_usdt bigint not null check (bid_credit_usdt >= 1),
   expected_transfer_amount_atomic numeric(78, 0) not null,
   expected_transfer_amount_display text not null,
   expected_sender_address text,

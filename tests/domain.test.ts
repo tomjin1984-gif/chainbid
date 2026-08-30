@@ -27,9 +27,11 @@ function evmAddressTopic(address: string) {
   return `0x${address.toLowerCase().replace(/^0x/, "").padStart(64, "0")}`;
 }
 
-test("validates whole-USDT bid limits", () => {
+test("validates whole-USDT bid minimum without a product-level cap", () => {
   assert.equal(parseWholeUsdt("5"), BigInt(5));
   assert.equal(parseWholeUsdt("999999"), BigInt(999999));
+  assert.equal(parseWholeUsdt("10000"), BigInt(10000));
+  assert.equal(parseWholeUsdt("1000000000"), BigInt(1000000000));
 
   for (const invalid of ["4", "5.5", "-10", "0", "NaN", "Infinity"]) {
     assert.throws(() => parseWholeUsdt(invalid));

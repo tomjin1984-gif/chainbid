@@ -1318,6 +1318,44 @@ h2 {
   white-space: nowrap;
 }
 
+.claim-amount-field {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.claim-amount-input {
+  appearance: textfield;
+  max-width: 9ch;
+  min-width: 2ch;
+  border: 0;
+  border-bottom: 1px solid rgba(0, 224, 164, 0.18);
+  border-radius: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  line-height: 0.95;
+  letter-spacing: 0;
+  outline: none;
+  padding: 0;
+  text-align: right;
+}
+
+.claim-amount-input::-webkit-inner-spin-button,
+.claim-amount-input::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.claim-amount-input:focus {
+  border-bottom-color: rgba(0, 224, 164, 0.72);
+}
+
+.claim-amount-unit {
+  color: var(--accent);
+}
+
 .title-price-control button:disabled {
   cursor: not-allowed;
   opacity: 0.45;

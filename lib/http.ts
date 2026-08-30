@@ -11,6 +11,7 @@ const fieldLabels: Record<string, string> = {
   category: "Category",
   network: "Network",
   bidTotalUsdt: "Bid amount",
+  minimumBidTotalUsdt: "Minimum bid amount",
   expectedSenderAddress: "Paying wallet",
   txHash: "Transaction hash",
 };

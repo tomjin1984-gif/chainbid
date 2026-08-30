@@ -3,9 +3,7 @@ import { categories } from "@/lib/seed";
 import { normalizeProjectUrl, slugifyProjectName } from "@/lib/domain/url";
 import {
   MIN_BID_USDT,
-  parseBoostTarget,
   parseWholeUsdt,
-  bidIncrementForTarget,
 } from "@/lib/domain/money";
 import type {
   PaymentOrderRecord,
@@ -41,6 +39,7 @@ const orderSchema = z.object({
     .optional(),
   network: z.enum(["tron", "ethereum", "bsc", "solana"]),
   bidTotalUsdt: z.union([z.string(), z.number(), z.bigint()]),
+  minimumBidTotalUsdt: z.union([z.string(), z.number(), z.bigint()]).optional(),
   expectedSenderAddress: z.string().max(160).optional().nullable(),
 });
 
@@ -104,27 +103,35 @@ function uniqueSlug(baseSlug: string, canonicalKey: string) {
   return `${baseSlug.slice(0, Math.max(1, 65 - suffix.length))}-${suffix}`;
 }
 
-function readableMinimumTarget(project: ProjectRecord) {
-  return project.totalBidUsdt > BigInt(0)
-    ? project.totalBidUsdt + BigInt(1)
-    : MIN_BID_USDT;
+function minimumTargetForProject(project: ProjectRecord, requestedMinimumTotal?: bigint | null) {
+  const naturalMinimum =
+    project.totalBidUsdt > BigInt(0)
+      ? project.totalBidUsdt + BigInt(1)
+      : MIN_BID_USDT;
+
+  if (requestedMinimumTotal && requestedMinimumTotal > naturalMinimum) {
+    return requestedMinimumTotal;
+  }
+
+  return naturalMinimum;
 }
 
-function calculateBidCredit(project: ProjectRecord, requestedTotal: bigint) {
-  if (project.totalBidUsdt === BigInt(0)) {
-    return requestedTotal;
+function calculateBidCredit(
+  project: ProjectRecord,
+  requestedTotal: bigint,
+  requestedMinimumTotal?: bigint | null,
+) {
+  const minimumTarget = minimumTargetForProject(project, requestedMinimumTotal);
+
+  if (requestedTotal < minimumTarget) {
+    throw new Error(
+      `Enter at least ${minimumTarget.toString()} USDT as the target total bid. You can enter any higher amount.`,
+    );
   }
 
-  try {
-    return bidIncrementForTarget(
-      project.totalBidUsdt,
-      parseBoostTarget(project.totalBidUsdt, requestedTotal),
-    );
-  } catch {
-    throw new Error(
-      `This listing is already at ${project.totalBidUsdt.toString()} USDT. Enter at least ${readableMinimumTarget(project).toString()} USDT as the target total bid.`,
-    );
-  }
+  return project.totalBidUsdt > BigInt(0)
+    ? requestedTotal - project.totalBidUsdt
+    : requestedTotal;
 }
 
 async function paymentOrderPayload(
@@ -243,6 +250,9 @@ export async function POST(request: Request) {
     }
 
     const requestedTotal = parseWholeUsdt(payload.bidTotalUsdt);
+    const requestedMinimumTotal = payload.minimumBidTotalUsdt
+      ? parseWholeUsdt(payload.minimumBidTotalUsdt)
+      : null;
     const reusableOrder = await repository.findOpenPaymentOrderForProject({
       projectId: project.id,
       statuses: reusableOrderStatuses,
@@ -252,21 +262,17 @@ export async function POST(request: Request) {
       let order = reusableOrder;
 
       if (reusableOrder.status === "waiting") {
-        try {
-          const draft = createPaymentOrderDraftForPublicId({
-            publicId: reusableOrder.publicId,
-            projectId: project.id,
-            network: payload.network as SupportedNetwork,
-            bidCreditUsdt: calculateBidCredit(project, requestedTotal),
-            expectedSenderAddress: payload.expectedSenderAddress,
-          });
-          order = (await repository.updateWaitingPaymentOrderNetwork(
-            reusableOrder.publicId,
-            draft,
-          )) ?? reusableOrder;
-        } catch {
-          order = reusableOrder;
-        }
+        const draft = createPaymentOrderDraftForPublicId({
+          publicId: reusableOrder.publicId,
+          projectId: project.id,
+          network: payload.network as SupportedNetwork,
+          bidCreditUsdt: calculateBidCredit(project, requestedTotal, requestedMinimumTotal),
+          expectedSenderAddress: payload.expectedSenderAddress,
+        });
+        order = (await repository.updateWaitingPaymentOrderNetwork(
+          reusableOrder.publicId,
+          draft,
+        )) ?? reusableOrder;
       } else if (reusableOrder.status === "confirmed") {
         const credited = await repository.creditPaymentOrder(reusableOrder.publicId);
         order = credited.order ?? reusableOrder;
@@ -276,7 +282,7 @@ export async function POST(request: Request) {
       return paymentOrderPayload(order, project, 200);
     }
 
-    const bidCreditUsdt = calculateBidCredit(project, requestedTotal);
+    const bidCreditUsdt = calculateBidCredit(project, requestedTotal, requestedMinimumTotal);
 
     const draft = createPaymentOrderDraft({
       projectId: project.id,

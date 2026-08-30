@@ -1,5 +1,4 @@
 export const MIN_BID_USDT = BigInt(5);
-export const MAX_BID_USDT = BigInt(999999);
 
 const MAX_SAFE_DISPLAY_DECIMALS = 18;
 
@@ -24,10 +23,6 @@ export function parseWholeUsdt(input: unknown): bigint {
   const amount = BigInt(value);
   if (amount < MIN_BID_USDT) {
     throw new Error("Minimum bid is 5 USDT.");
-  }
-
-  if (amount > MAX_BID_USDT) {
-    throw new Error("Maximum bid is 999999 USDT.");
   }
 
   return amount;

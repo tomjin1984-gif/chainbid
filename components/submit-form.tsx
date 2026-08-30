@@ -31,6 +31,19 @@ function formatFieldList(fields: string[]) {
   return `${fields.slice(0, -1).join(", ")}, and ${fields.at(-1)}`;
 }
 
+function parseWholeUsdtInput(value: string) {
+  const trimmed = value.trim();
+  if (!/^(0|[1-9][0-9]*)$/.test(trimmed)) {
+    return null;
+  }
+
+  return BigInt(trimmed);
+}
+
+function formatWholeUsdt(value: bigint) {
+  return `${new Intl.NumberFormat("en-US").format(value)} USDT`;
+}
+
 export function SubmitForm({
   networks,
   boostProject,
@@ -44,6 +57,7 @@ export function SubmitForm({
   defaultUrl?: string;
   defaultCategory?: string;
 }) {
+  const minimumTarget = boostProject ? defaultTarget : null;
   const [network, setNetwork] = useState<NetworkOption["network"]>(
     networks.find((item) => item.enabled)?.network ?? "tron",
   );
@@ -81,6 +95,20 @@ export function SubmitForm({
       return;
     }
 
+    const bidAmount = parseWholeUsdtInput(bid);
+    if (!bidAmount || bidAmount < BigInt(5)) {
+      setStatus("Please enter a whole USDT amount of at least 5.");
+      return;
+    }
+
+    if (minimumTarget) {
+      const minimumAmount = parseWholeUsdtInput(minimumTarget);
+      if (minimumAmount && bidAmount < minimumAmount) {
+        setStatus(`Enter at least ${formatWholeUsdt(minimumAmount)} for this boost. You can enter any higher amount.`);
+        return;
+      }
+    }
+
     setBusy(true);
 
     try {
@@ -89,6 +117,7 @@ export function SubmitForm({
               projectId: boostProject.id,
               network,
               bidTotalUsdt: bid,
+              ...(minimumTarget ? { minimumBidTotalUsdt: minimumTarget } : {}),
             }
           : {
               project: {
