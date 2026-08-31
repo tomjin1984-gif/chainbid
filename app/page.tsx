@@ -54,6 +54,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "Chain.bid - The Crypto Leaderboard",
     description:
       "Crypto projects compete for visibility. Higher verified USDT bids rank higher.",
+    manifest: "/manifest.webmanifest",
     alternates: {
       canonical: origin,
     },
@@ -73,13 +74,14 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     icons: {
       icon: [
-        { url: "/favicon.ico", sizes: "50x50", type: "image/x-icon" },
+        { url: "/favicon.ico", sizes: "16x16 32x32 48x48", type: "image/x-icon" },
         { url: "/favicon.svg", type: "image/svg+xml" },
-        { url: "/brand/chain-bid-logo-50.png", sizes: "50x50", type: "image/png" },
-        { url: "/brand/chain-bid-logo-100.png", sizes: "100x100", type: "image/png" },
+        { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+        { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+        { url: "/favicon-48x48.png", sizes: "48x48", type: "image/png" },
       ],
       shortcut: "/favicon.ico",
-      apple: "/brand/chain-bid-logo-200.png",
+      apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
     },
   };
 }
@@ -188,11 +190,11 @@ export default async function Home({
           <a href="#leaderboard">Live stats</a>
           <span>·</span>
           <a
-            href="https://x.com/HyperJanus"
+            href="https://x.com/Chainbid"
             className="footer-social-link"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Follow HyperJanus on X"
+            aria-label="Follow Chainbid on X"
           >
             <span aria-hidden="true">X</span>
           </a>

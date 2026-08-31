@@ -36,6 +36,9 @@ test("server-renders the crypto leaderboard", async () => {
   assert.match(html, /\/brand\/chain-bid-logo\.svg/);
   assert.match(html, /\/favicon\.ico/);
   assert.match(html, /\/favicon\.svg/);
+  assert.match(html, /\/favicon-32x32\.png/);
+  assert.match(html, /\/apple-touch-icon\.png/);
+  assert.match(html, /\/manifest\.webmanifest/);
   assert.match(html, /Switch to light mode/);
   assert.doesNotMatch(html, /Submit Project/);
   assert.match(html, /Claim #1 for/);
@@ -51,8 +54,8 @@ test("server-renders the crypto leaderboard", async () => {
   assert.match(html, /Claim #1/);
   assert.match(html, /1(?:<!-- -->)? - (?:<!-- -->)?20(?:<!-- -->)? of (?:<!-- -->)?20/);
   assert.doesNotMatch(html, /Refresh/);
-  assert.match(html, /https:\/\/x\.com\/HyperJanus/);
-  assert.match(html, /Follow HyperJanus on X/);
+  assert.match(html, /https:\/\/x\.com\/Chainbid/);
+  assert.match(html, /Follow Chainbid on X/);
   assert.match(html, /\/api\/project-icon\?/);
   assert.match(html, /href="\/api\/click\/uniswap"/);
   assert.match(html, /href="\/submit\?boost=uniswap&amp;target=/);

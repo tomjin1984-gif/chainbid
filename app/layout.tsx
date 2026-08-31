@@ -36,6 +36,7 @@ export const metadata: Metadata = {
   description:
     "A paid crypto leaderboard where verified USDT bids determine ranking.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://chain.bid"),
+  manifest: "/manifest.webmanifest",
   alternates: {
     canonical: "/",
   },
@@ -62,13 +63,14 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "50x50", type: "image/x-icon" },
+      { url: "/favicon.ico", sizes: "16x16 32x32 48x48", type: "image/x-icon" },
       { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/brand/chain-bid-logo-50.png", sizes: "50x50", type: "image/png" },
-      { url: "/brand/chain-bid-logo-100.png", sizes: "100x100", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-48x48.png", sizes: "48x48", type: "image/png" },
     ],
     shortcut: "/favicon.ico",
-    apple: "/brand/chain-bid-logo-200.png",
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
 };
 
