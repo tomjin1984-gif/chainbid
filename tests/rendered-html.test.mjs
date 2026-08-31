@@ -34,6 +34,7 @@ test("server-renders the crypto leaderboard", async () => {
   const html = await response.text();
   assert.match(html, /Chain\.bid/);
   assert.match(html, /\/brand\/chain-bid-logo\.svg/);
+  assert.match(html, /\/og-chainbid-share\.png/);
   assert.match(html, /\/favicon\.ico/);
   assert.match(html, /\/favicon\.svg/);
   assert.match(html, /\/favicon-32x32\.png/);

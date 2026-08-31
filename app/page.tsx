@@ -16,6 +16,8 @@ import { publicLeaderboardEntry } from "@/lib/repository/serializers";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+const socialPreviewImage = "/og-chainbid-share.png";
+
 function formatRunTime(startedAt: Date, now = new Date()) {
   const elapsedMs = Math.max(0, now.getTime() - startedAt.getTime());
   const elapsedHours = Math.max(1, Math.floor(elapsedMs / (1000 * 60 * 60)));
@@ -48,7 +50,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const host = requestHeaders.get("host");
   const protocol = requestHeaders.get("x-forwarded-proto") ?? "https";
   const origin = host ? `${protocol}://${host}` : getPublicAppUrl();
-  const imageUrl = `${origin}/og.png`;
+  const imageUrl = `${origin}${socialPreviewImage}`;
 
   return {
     title: "Chain.bid - The Crypto Leaderboard",

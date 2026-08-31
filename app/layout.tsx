@@ -4,6 +4,8 @@ import { headers } from "next/headers";
 import { GlobalHeader } from "@/components/global-header";
 import "./globals.css";
 
+const socialPreviewImage = "/og-chainbid-share.png";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -47,7 +49,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/og.png",
+        url: socialPreviewImage,
         width: 1200,
         height: 630,
         alt: "Chain.bid crypto leaderboard preview",
@@ -59,7 +61,7 @@ export const metadata: Metadata = {
     title: "Chain.bid - The Crypto Leaderboard",
     description:
       "Crypto projects compete for visibility. Higher verified USDT bids rank higher.",
-    images: ["/og.png"],
+    images: [socialPreviewImage],
   },
   icons: {
     icon: [
