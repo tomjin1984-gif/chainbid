@@ -82,9 +82,9 @@ class DevRepository implements Repository {
         kind: "payment_credited",
         projectId: "bittensor",
         paymentOrderId: null,
-        headline: "bittensor.com raised its bid to 13,500 USDT",
+        headline: "bittensor.com listed at 10 USDT",
         metadata: { developmentSeed: true },
-        createdAt: "2026-08-22T09:14:00.000Z",
+        createdAt: "2026-09-03T00:00:00.000Z",
       },
     ];
   }
