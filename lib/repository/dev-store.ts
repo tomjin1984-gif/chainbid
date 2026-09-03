@@ -71,11 +71,11 @@ class DevRepository implements Repository {
       {
         id: "act_1",
         kind: "rank_changed",
-        projectId: "uniswap",
+        projectId: "okx",
         paymentOrderId: null,
-        headline: "uniswap.org took #1 - 14,023 USDT",
+        headline: "okx.com took #1 - 30 USDT",
         metadata: { developmentSeed: true },
-        createdAt: "2026-08-22T12:05:00.000Z",
+        createdAt: "2026-09-04T00:00:00.000Z",
       },
       {
         id: "act_2",

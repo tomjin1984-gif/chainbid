@@ -53,13 +53,13 @@ test("server-renders the crypto leaderboard", async () => {
   assert.match(html, /This leaderboard has processed/);
   assert.match(html, /since its launch/);
   assert.match(html, /Claim #1/);
-  assert.match(html, /1(?:<!-- -->)? - (?:<!-- -->)?20(?:<!-- -->)? of (?:<!-- -->)?26/);
+  assert.match(html, /1(?:<!-- -->)? - (?:<!-- -->)?20(?:<!-- -->)? of (?:<!-- -->)?46/);
   assert.doesNotMatch(html, /Refresh/);
   assert.match(html, /https:\/\/x\.com\/Chainbid/);
   assert.match(html, /Follow Chainbid on X/);
   assert.match(html, /\/api\/project-icon\?/);
-  assert.match(html, /href="\/api\/click\/uniswap"/);
-  assert.match(html, /href="\/submit\?boost=uniswap&amp;target=/);
+  assert.match(html, /href="\/api\/click\/okx"/);
+  assert.match(html, /href="\/submit\?boost=okx&amp;target=/);
   assert.doesNotMatch(html, /class="domain"/);
   assert.doesNotMatch(html, /href="\/project\//);
   assert.doesNotMatch(html, /codex-preview/);
