@@ -19,7 +19,7 @@ export async function POST(request: Request) {
 
   const results = await runPaymentWorkerCycle({
     repository: getRepository(),
-    limit: 50,
+    limit: Number(process.env.PAYMENT_WORKER_BATCH_SIZE ?? 10),
   });
 
   return Response.json({

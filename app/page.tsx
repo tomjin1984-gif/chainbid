@@ -9,7 +9,6 @@ import {
 import { getNetworkConfigs } from "@/lib/config/networks";
 import { getPublicAppUrl } from "@/lib/config/env";
 import { claimTopBid } from "@/lib/domain/ranking";
-import { runAutomaticPaymentSweep } from "@/lib/payment/auto-sweep";
 import { getRepository } from "@/lib/repository";
 import { publicLeaderboardEntry } from "@/lib/repository/serializers";
 
@@ -96,11 +95,6 @@ export default async function Home({
   const params = await searchParams;
   const activeCategory = params.category ?? "All";
   const repository = getRepository();
-  await runAutomaticPaymentSweep({
-    repository,
-    limit: 3,
-    maxWaitMs: 3_000,
-  });
   const [allProjects, activity] = await Promise.all([
     repository.getLeaderboard(),
     repository.getActivity(8),

@@ -57,7 +57,7 @@ test("server-renders the crypto leaderboard", async () => {
   assert.doesNotMatch(html, /Refresh/);
   assert.match(html, /https:\/\/x\.com\/Chainbid/);
   assert.match(html, /Follow Chainbid on X/);
-  assert.match(html, /\/api\/project-icon\?/);
+  assert.match(html, /https:\/\/www\.google\.com\/s2\/favicons/);
   assert.match(html, /href="\/api\/click\/okx"/);
   assert.match(html, /href="\/submit\?boost=okx&amp;target=/);
   assert.doesNotMatch(html, /class="domain"/);

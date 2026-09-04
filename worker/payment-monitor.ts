@@ -4,7 +4,7 @@ import { getRepository } from "@/lib/repository";
 export async function runPaymentMonitor() {
   const results = await runPaymentWorkerCycle({
     repository: getRepository(),
-    limit: Number(process.env.PAYMENT_WORKER_BATCH_SIZE ?? 100),
+    limit: Number(process.env.PAYMENT_WORKER_BATCH_SIZE ?? 10),
   });
 
   console.log(

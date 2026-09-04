@@ -51,8 +51,23 @@ function projectLogoUrl(project: Pick<PublicLeaderboardEntry, "logoUrl" | "url">
     return null;
   }
 
-  const params = new URLSearchParams({ url });
   const icon = project.logoUrl?.trim();
+  if (icon) {
+    try {
+      const iconUrl = new URL(icon);
+      if (
+        iconUrl.protocol === "https:" &&
+        iconUrl.hostname === "www.google.com" &&
+        iconUrl.pathname === "/s2/favicons"
+      ) {
+        return iconUrl.toString();
+      }
+    } catch {
+      // Fall through to the safe proxy for non-URL icon values.
+    }
+  }
+
+  const params = new URLSearchParams({ url });
   if (icon) {
     params.set("src", icon);
   }
