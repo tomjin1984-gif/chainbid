@@ -63,16 +63,16 @@ function projectLogoUrl(project: Pick<PublicLeaderboardEntry, "logoUrl" | "url">
         return iconUrl.toString();
       }
     } catch {
-      // Fall through to the safe proxy for non-URL icon values.
+      // Fall through to the favicon service when stored metadata is not a URL.
     }
   }
 
-  const params = new URLSearchParams({ url });
-  if (icon) {
-    params.set("src", icon);
+  try {
+    const { hostname } = new URL(url);
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostname)}&sz=64`;
+  } catch {
+    return null;
   }
-
-  return `/api/project-icon?${params.toString()}`;
 }
 
 function projectTitle(project: Pick<PublicLeaderboardEntry, "name" | "url">) {
@@ -235,7 +235,7 @@ function LatestActivityStrip({
             <div className="activity-pill" key={item.id}>
               <span className="activity-avatar" aria-hidden="true">
                 {item.logoUrl ? (
-                  <img src={item.logoUrl} alt="" loading="lazy" />
+                  <img src={item.logoUrl} alt="" loading="eager" decoding="async" />
                 ) : (
                   item.initials ?? <Icon size={14} />
                 )}
@@ -264,6 +264,7 @@ function ProjectRankCard({
 }) {
   const isTopRank = project.rank <= 3;
   const title = projectTitle(project);
+  const logoUrl = projectLogoUrl(project);
   const projectClickHref = `/api/click/${encodeURIComponent(project.id)}`;
   const cardClassName = [
     "ranked-card",
@@ -290,14 +291,15 @@ function ProjectRankCard({
           </span>
         </div>
         <div className="rank-project">
-          {projectLogoUrl(project) ? (
+          {logoUrl ? (
             <img
               className="logo-image"
-              src={projectLogoUrl(project) ?? ""}
+              src={logoUrl}
               alt=""
               width={42}
               height={42}
-              loading="lazy"
+              loading={project.rank <= 10 ? "eager" : "lazy"}
+              decoding="async"
             />
           ) : (
             <div className="logo-token">{title.slice(0, 2).toUpperCase()}</div>
