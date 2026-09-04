@@ -19,7 +19,7 @@ import { categories } from "@/lib/seed";
 import type { ActivityEventRecord, LeaderboardEntry } from "@/lib/domain/types";
 
 const categoryChangeEvent = "chainbid:category-change";
-const leaderboardPageSize = 20;
+const leaderboardPageSize = 50;
 
 type PublicLeaderboardEntry = Omit<
   LeaderboardEntry,
