@@ -1,4 +1,4 @@
-import { sanitizeProjectIconUrl } from "@/lib/project-icons";
+import { projectFaviconFallbackUrl, sanitizeProjectIconUrl } from "@/lib/project-icons";
 
 const FETCH_TIMEOUT_MS = 900;
 const MAX_ICON_BYTES = 512 * 1024;
@@ -146,6 +146,21 @@ function fallbackSvg(projectUrl: string | null) {
   });
 }
 
+function fallbackFaviconRedirect(projectUrl: string | null) {
+  const safeProjectUrl = projectUrl ? sanitizeProjectIconUrl(projectUrl) : null;
+  const fallbackUrl = safeProjectUrl ? projectFaviconFallbackUrl(safeProjectUrl) : null;
+
+  return fallbackUrl
+    ? new Response(null, {
+        status: 302,
+        headers: {
+          "cache-control": "public, max-age=86400, stale-while-revalidate=604800",
+          location: fallbackUrl,
+        },
+      })
+    : null;
+}
+
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const url = params.get("url");
@@ -156,6 +171,11 @@ export async function GET(request: Request) {
     if (icon) {
       return icon;
     }
+  }
+
+  const fallback = fallbackFaviconRedirect(url);
+  if (fallback) {
+    return fallback;
   }
 
   return fallbackSvg(url);

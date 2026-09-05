@@ -56,6 +56,14 @@ function projectLogoUrl(project: Pick<PublicLeaderboardEntry, "logoUrl" | "url">
   if (icon) {
     try {
       const iconUrl = new URL(icon);
+      if (
+        iconUrl.protocol === "https:" &&
+        iconUrl.hostname === "www.google.com" &&
+        iconUrl.pathname === "/s2/favicons"
+      ) {
+        return iconUrl.toString();
+      }
+
       if (iconUrl.hostname !== "www.google.com" || iconUrl.pathname !== "/s2/favicons") {
         params.set("src", iconUrl.toString());
       }
