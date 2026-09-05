@@ -1,7 +1,7 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element -- Project icons come from arbitrary submitted URLs. */
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import {
   ArrowLeft,
@@ -51,32 +51,120 @@ function projectLogoUrl(project: Pick<PublicLeaderboardEntry, "logoUrl" | "url">
     return null;
   }
 
+  const params = new URLSearchParams({ url });
   const icon = project.logoUrl?.trim();
   if (icon) {
     try {
       const iconUrl = new URL(icon);
-      if (
-        iconUrl.protocol === "https:" &&
-        iconUrl.hostname === "www.google.com" &&
-        iconUrl.pathname === "/s2/favicons"
-      ) {
-        return iconUrl.toString();
+      if (iconUrl.hostname !== "www.google.com" || iconUrl.pathname !== "/s2/favicons") {
+        params.set("src", iconUrl.toString());
       }
     } catch {
-      // Fall through to the favicon service when stored metadata is not a URL.
+      // Fall through to the project URL favicon.
     }
   }
 
-  try {
-    const { hostname } = new URL(url);
-    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostname)}&sz=64`;
-  } catch {
-    return null;
-  }
+  return `/api/project-icon?${params.toString()}`;
 }
 
 function projectTitle(project: Pick<PublicLeaderboardEntry, "name" | "url">) {
   return projectDisplayName(project.name, project.url);
+}
+
+function DeferredProjectLogo({
+  project,
+  title,
+  priority = false,
+  compact = false,
+}: {
+  project: Pick<PublicLeaderboardEntry, "logoUrl" | "url">;
+  title: string;
+  priority?: boolean;
+  compact?: boolean;
+}) {
+  const [shouldLoad, setShouldLoad] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const logoRef = useRef<HTMLSpanElement>(null);
+  const logoUrl = useMemo(() => projectLogoUrl(project), [project]);
+  const initials = title.slice(0, 2).toUpperCase();
+
+  useEffect(() => {
+    if (!logoUrl || failed) {
+      return;
+    }
+
+    const node = logoRef.current;
+    let cancelIdleLoad: (() => void) | null = null;
+    let observer: IntersectionObserver | null = null;
+    let cancelled = false;
+
+    function scheduleLoad(timeoutMs: number) {
+      if ("requestIdleCallback" in window) {
+        const handle = window.requestIdleCallback(
+          () => {
+            if (!cancelled) {
+              setShouldLoad(true);
+            }
+          },
+          { timeout: timeoutMs },
+        );
+        cancelIdleLoad = () => window.cancelIdleCallback(handle);
+      } else {
+        const handle = globalThis.setTimeout(() => {
+          if (!cancelled) {
+            setShouldLoad(true);
+          }
+        }, Math.min(timeoutMs, 900));
+        cancelIdleLoad = () => globalThis.clearTimeout(handle);
+      }
+    }
+
+    if (priority) {
+      scheduleLoad(700);
+    } else if (node && "IntersectionObserver" in window) {
+      observer = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) {
+            observer?.disconnect();
+            scheduleLoad(1_500);
+          }
+        },
+        { rootMargin: "180px" },
+      );
+      observer.observe(node);
+    } else {
+      scheduleLoad(1_500);
+    }
+
+    return () => {
+      cancelled = true;
+      observer?.disconnect();
+      cancelIdleLoad?.();
+    };
+  }, [failed, logoUrl, priority]);
+
+  return (
+    <span
+      ref={logoRef}
+      className={compact ? "project-logo-stack project-logo-stack-compact" : "project-logo-stack"}
+      aria-hidden="true"
+    >
+      <span className="logo-token">{initials}</span>
+      {shouldLoad && logoUrl && !failed ? (
+        <img
+          className="logo-image"
+          src={logoUrl}
+          alt=""
+          width={compact ? 30 : 42}
+          height={compact ? 30 : 42}
+          loading="lazy"
+          decoding="async"
+          fetchPriority="low"
+          onError={() => setFailed(true)}
+        />
+      ) : null}
+    </span>
+  );
 }
 
 function formatActivityAge(createdAt: string, now = new Date()) {
@@ -214,7 +302,7 @@ function LatestActivityStrip({
       age: formatActivityAge(event.createdAt),
       icon: Icon,
       initials: project ? projectTitle(project).slice(0, 2).toUpperCase() : null,
-      logoUrl: project ? projectLogoUrl(project) : null,
+      project,
     };
   });
 
@@ -234,10 +322,12 @@ function LatestActivityStrip({
           return (
             <div className="activity-pill" key={item.id}>
               <span className="activity-avatar" aria-hidden="true">
-                {item.logoUrl ? (
-                  <img src={item.logoUrl} alt="" loading="eager" decoding="async" />
+                {item.project ? (
+                  <DeferredProjectLogo project={item.project} title={item.title} compact />
+                ) : item.initials ? (
+                  item.initials
                 ) : (
-                  item.initials ?? <Icon size={14} />
+                  <Icon size={14} />
                 )}
               </span>
               <div>
@@ -264,7 +354,6 @@ function ProjectRankCard({
 }) {
   const isTopRank = project.rank <= 3;
   const title = projectTitle(project);
-  const logoUrl = projectLogoUrl(project);
   const projectClickHref = `/api/click/${encodeURIComponent(project.id)}`;
   const cardClassName = [
     "ranked-card",
@@ -291,19 +380,7 @@ function ProjectRankCard({
           </span>
         </div>
         <div className="rank-project">
-          {logoUrl ? (
-            <img
-              className="logo-image"
-              src={logoUrl}
-              alt=""
-              width={42}
-              height={42}
-              loading={project.rank <= 10 ? "eager" : "lazy"}
-              decoding="async"
-            />
-          ) : (
-            <div className="logo-token">{title.slice(0, 2).toUpperCase()}</div>
-          )}
+          <DeferredProjectLogo project={project} title={title} priority={project.rank <= 3} />
           <div>
             <span className="project-name">{title}</span>
             <p>{project.description}</p>

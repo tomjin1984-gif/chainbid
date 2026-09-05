@@ -1,6 +1,6 @@
-import { projectFaviconFallbackUrl, sanitizeProjectIconUrl } from "@/lib/project-icons";
+import { sanitizeProjectIconUrl } from "@/lib/project-icons";
 
-const FETCH_TIMEOUT_MS = 2_500;
+const FETCH_TIMEOUT_MS = 900;
 const MAX_ICON_BYTES = 512 * 1024;
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const IMAGE_EXTENSION_PATTERN = /\.(?:ico|png|jpe?g|gif|webp|svg)(?:$|[?#])/i;
@@ -116,10 +116,6 @@ function iconCandidates(url: string | null, src: string | null) {
       candidates.push(directFavicon);
     }
 
-    const serviceFavicon = projectFaviconFallbackUrl(safeProjectUrl);
-    if (serviceFavicon) {
-      candidates.push(serviceFavicon);
-    }
   }
 
   return unique(candidates);

@@ -850,6 +850,39 @@ h2 {
   height: 34px;
 }
 
+.project-logo-stack {
+  position: relative;
+  display: block;
+  width: 34px;
+  height: 34px;
+  overflow: hidden;
+  border-radius: 8px;
+  flex: 0 0 auto;
+}
+
+.project-logo-stack .logo-image,
+.project-logo-stack .logo-token {
+  position: absolute;
+  inset: 0;
+}
+
+.project-logo-stack .logo-image {
+  z-index: 1;
+}
+
+.project-logo-stack-compact {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+}
+
+.project-logo-stack-compact .logo-image,
+.project-logo-stack-compact .logo-token {
+  width: 30px;
+  height: 30px;
+  border-radius: inherit;
+}
+
 .project-name {
   font-size: 13px;
 }
@@ -3130,7 +3163,8 @@ html[data-theme="light"] .error-line {
   }
 
   .rank-project .logo-image,
-  .rank-project .logo-token {
+  .rank-project .logo-token,
+  .rank-project .project-logo-stack {
     width: 26px;
     height: 26px;
   }
