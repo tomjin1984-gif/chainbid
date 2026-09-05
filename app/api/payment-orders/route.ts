@@ -15,7 +15,7 @@ import { getNetworkConfig } from "@/lib/config/networks";
 import { encodeDevelopmentCheckout } from "@/lib/dev-checkout-token";
 import { createPaymentOrderDraft } from "@/lib/payment/orders";
 import { buildPaymentPayload, warningForNetwork } from "@/lib/payment/uris";
-import { resolveProjectStoredLogoUrl } from "@/lib/project-icons";
+import { projectFaviconFallbackUrl, sanitizeProjectIconUrl } from "@/lib/project-icons";
 import { inferProjectMetadataFromUrl } from "@/lib/project-metadata";
 import { getRepository } from "@/lib/repository";
 import { publicPaymentOrder, publicProject } from "@/lib/repository/serializers";
@@ -185,10 +185,9 @@ export async function POST(request: Request) {
         project = duplicate;
       } else {
         const metadata = inferProjectMetadataFromUrl(normalized.url);
-        const logoUrl = await resolveProjectStoredLogoUrl(
-          normalized.url,
-          payload.project.logoUrl,
-        );
+        const logoUrl =
+          sanitizeProjectIconUrl(payload.project.logoUrl ?? "", normalized.url) ||
+          projectFaviconFallbackUrl(normalized.url);
         const name = payload.project.name?.trim() || metadata.name;
         const description = payload.project.description?.trim() || metadata.description;
 

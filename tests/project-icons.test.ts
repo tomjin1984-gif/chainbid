@@ -4,8 +4,6 @@ import {
   discoverProjectIconUrl,
   extractIconCandidateUrls,
   resolveProjectLogoUrl,
-  resolveProjectStoredLogoUrl,
-  sanitizeStoredProjectIconDataUrl,
   sanitizeProjectIconUrl,
 } from "../lib/project-icons";
 
@@ -88,33 +86,5 @@ test("uses a favicon service fallback when direct discovery fails", async () => 
   assert.equal(
     await resolveProjectLogoUrl("https://www.binance.com", null, fetcher),
     "https://www.google.com/s2/favicons?domain=www.binance.com&sz=64",
-  );
-});
-
-test("stores a small project favicon as a data URL", async () => {
-  const fetcher = async (input: string) => {
-    if (input === "https://example.com/favicon.ico") {
-      return new Response("icon", {
-        headers: { "content-type": "image/png" },
-      });
-    }
-
-    throw new Error(`Unexpected fetch: ${input}`);
-  };
-
-  assert.equal(
-    await resolveProjectStoredLogoUrl("https://example.com", null, fetcher),
-    "data:image/png;base64,aWNvbg==",
-  );
-});
-
-test("rejects unsafe or oversized stored favicon data URLs", () => {
-  assert.equal(
-    sanitizeStoredProjectIconDataUrl("data:image/svg+xml;base64,PHN2Zy8+"),
-    null,
-  );
-  assert.equal(
-    sanitizeStoredProjectIconDataUrl(`data:image/png;base64,${"a".repeat(20_000)}`),
-    null,
   );
 });

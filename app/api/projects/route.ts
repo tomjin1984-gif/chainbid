@@ -2,7 +2,7 @@ import { z } from "zod";
 import { categories } from "@/lib/seed";
 import { normalizeProjectUrl, slugifyProjectName } from "@/lib/domain/url";
 import { assertSafeMetadataUrl } from "@/lib/security/ssrf";
-import { resolveProjectStoredLogoUrl } from "@/lib/project-icons";
+import { resolveProjectLogoUrl } from "@/lib/project-icons";
 import { resolveProjectMetadata } from "@/lib/project-metadata";
 import { getRepository } from "@/lib/repository";
 import { publicProject } from "@/lib/repository/serializers";
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
 
     const [metadata, logoUrl] = await Promise.all([
       resolveProjectMetadata(normalized.url),
-      resolveProjectStoredLogoUrl(normalized.url, payload.logoUrl),
+      resolveProjectLogoUrl(normalized.url, payload.logoUrl),
     ]);
     const name = payload.name?.trim() || metadata.name;
     const description = payload.description?.trim() || metadata.description;
