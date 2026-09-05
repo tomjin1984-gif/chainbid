@@ -3,9 +3,23 @@ import { assertSafeMetadataUrl } from "@/lib/security/ssrf";
 const MAX_HTML_BYTES = 128 * 1024;
 const PAGE_FETCH_TIMEOUT_MS = 3_500;
 const ICON_FETCH_TIMEOUT_MS = 2_500;
+const STORED_ICON_FETCH_TIMEOUT_MS = 900;
+const MAX_STORED_ICON_BYTES = 12 * 1024;
 const MAX_REDIRECTS = 3;
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const IMAGE_EXTENSION_PATTERN = /\.(?:ico|png|jpe?g|gif|webp|svg)(?:$|[?#])/i;
+const STORED_DATA_ICON_PATTERN =
+  /^data:image\/(?:png|jpe?g|gif|webp|x-icon|vnd\.microsoft\.icon);base64,[a-z0-9+/=]+$/i;
+
+const STORED_ICON_CONTENT_TYPES = new Map([
+  ["image/png", "image/png"],
+  ["image/jpeg", "image/jpeg"],
+  ["image/jpg", "image/jpeg"],
+  ["image/gif", "image/gif"],
+  ["image/webp", "image/webp"],
+  ["image/x-icon", "image/x-icon"],
+  ["image/vnd.microsoft.icon", "image/x-icon"],
+]);
 
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -57,6 +71,17 @@ function iconPriority(rel: string) {
 
 function unique(values: string[]) {
   return [...new Set(values)];
+}
+
+export function sanitizeStoredProjectIconDataUrl(input: string) {
+  const trimmed = input.trim();
+  if (!STORED_DATA_ICON_PATTERN.test(trimmed)) {
+    return null;
+  }
+
+  const [, payload = ""] = trimmed.split(",", 2);
+  const estimatedBytes = Math.floor((payload.replace(/=+$/, "").length * 3) / 4);
+  return estimatedBytes <= MAX_STORED_ICON_BYTES ? trimmed : null;
 }
 
 export function sanitizeProjectIconUrl(input: string, baseUrl?: string | URL) {
@@ -231,6 +256,85 @@ async function iconUrlLooksUsable(iconUrl: string, fetcher: FetchLike) {
   }
 }
 
+function arrayBufferToBase64(buffer: ArrayBuffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+
+  for (let index = 0; index < bytes.length; index += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+  }
+
+  return btoa(binary);
+}
+
+function iconMimeFromResponse(response: Response, url: string) {
+  const contentType = response.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase();
+  if (contentType) {
+    const supportedType = STORED_ICON_CONTENT_TYPES.get(contentType);
+    if (supportedType) {
+      return supportedType;
+    }
+  }
+
+  const pathname = new URL(url).pathname.toLowerCase();
+  if (pathname.endsWith(".png")) {
+    return "image/png";
+  }
+  if (pathname.endsWith(".jpg") || pathname.endsWith(".jpeg")) {
+    return "image/jpeg";
+  }
+  if (pathname.endsWith(".gif")) {
+    return "image/gif";
+  }
+  if (pathname.endsWith(".webp")) {
+    return "image/webp";
+  }
+  if (pathname.endsWith(".ico")) {
+    return "image/x-icon";
+  }
+
+  return null;
+}
+
+async function iconUrlToStoredDataUrl(iconUrl: string, fetcher: FetchLike) {
+  try {
+    const safeIconUrl = sanitizeProjectIconUrl(iconUrl);
+    if (!safeIconUrl) {
+      return null;
+    }
+
+    const result = await fetchWithSafeRedirects(
+      fetcher,
+      safeIconUrl,
+      { method: "GET", headers: { accept: "image/png,image/webp,image/jpeg,image/gif,image/x-icon,*/*;q=0.2" } },
+      STORED_ICON_FETCH_TIMEOUT_MS,
+    );
+
+    if (!result.ok) {
+      return null;
+    }
+
+    const mime = iconMimeFromResponse(result, safeIconUrl);
+    if (!mime) {
+      return null;
+    }
+
+    const contentLength = Number(result.headers.get("content-length") ?? 0);
+    if (contentLength > MAX_STORED_ICON_BYTES) {
+      return null;
+    }
+
+    const body = await result.arrayBuffer();
+    if (body.byteLength > MAX_STORED_ICON_BYTES) {
+      return null;
+    }
+
+    return `data:${mime};base64,${arrayBufferToBase64(body)}`;
+  } catch {
+    return null;
+  }
+}
+
 export async function discoverProjectIconUrl(
   projectUrl: string,
   fetcher: FetchLike = fetch,
@@ -293,6 +397,39 @@ export async function resolveProjectLogoUrl(
   }
 
   return projectFaviconFallbackUrl(projectUrl);
+}
+
+export async function resolveProjectStoredLogoUrl(
+  projectUrl: string,
+  suppliedLogoUrl?: string | null,
+  fetcher: FetchLike = fetch,
+) {
+  const supplied = suppliedLogoUrl?.trim();
+  if (supplied) {
+    const suppliedDataUrl = sanitizeStoredProjectIconDataUrl(supplied);
+    if (suppliedDataUrl) {
+      return suppliedDataUrl;
+    }
+
+    const suppliedUrl = sanitizeProjectIconUrl(supplied, projectUrl);
+    const storedSuppliedIcon = suppliedUrl
+      ? await iconUrlToStoredDataUrl(suppliedUrl, fetcher)
+      : null;
+    if (storedSuppliedIcon) {
+      return storedSuppliedIcon;
+    }
+  }
+
+  const directFavicon = sanitizeProjectIconUrl("/favicon.ico", projectUrl);
+  if (directFavicon) {
+    const storedDirectFavicon = await iconUrlToStoredDataUrl(directFavicon, fetcher);
+    if (storedDirectFavicon) {
+      return storedDirectFavicon;
+    }
+  }
+
+  const serviceFavicon = projectFaviconFallbackUrl(projectUrl);
+  return serviceFavicon ? iconUrlToStoredDataUrl(serviceFavicon, fetcher) : null;
 }
 
 export function projectFaviconFallbackUrl(projectUrl: string) {

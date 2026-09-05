@@ -15,11 +15,14 @@ import {
 import { RankedCardShell } from "@/components/ranked-card-shell";
 import { formatUsdt } from "@/lib/domain/money";
 import { projectDisplayName } from "@/lib/project-metadata";
+import { staticProjectIconUrl } from "@/lib/static-project-icons";
 import { categories } from "@/lib/seed";
 import type { ActivityEventRecord, LeaderboardEntry } from "@/lib/domain/types";
 
 const categoryChangeEvent = "chainbid:category-change";
 const leaderboardPageSize = 50;
+const storedDataIconPattern =
+  /^data:image\/(?:png|jpe?g|gif|webp|x-icon|vnd\.microsoft\.icon);base64,[a-z0-9+/=]+$/i;
 
 type PublicLeaderboardEntry = Omit<
   LeaderboardEntry,
@@ -45,26 +48,47 @@ function validCategory(category: string | undefined | null) {
     : "All";
 }
 
-function projectLogoUrl(project: Pick<PublicLeaderboardEntry, "logoUrl" | "url">) {
+function storedDataIconUrl(icon: string) {
+  return storedDataIconPattern.test(icon) ? icon : null;
+}
+
+function projectLogoUrl(project: Pick<PublicLeaderboardEntry, "logoUrl" | "slug" | "url">) {
   const url = project.url.trim();
   if (!url) {
     return null;
   }
 
-  const params = new URLSearchParams({ url });
   const icon = project.logoUrl?.trim();
+  if (icon) {
+    const dataIcon = storedDataIconUrl(icon);
+    if (dataIcon) {
+      return dataIcon;
+    }
+
+    if (icon.startsWith("/project-icons/")) {
+      return icon;
+    }
+  }
+
+  const staticIcon = staticProjectIconUrl(project.slug);
+  if (staticIcon) {
+    return staticIcon;
+  }
+
   if (icon) {
     try {
       const iconUrl = new URL(icon);
       if (iconUrl.hostname !== "www.google.com" || iconUrl.pathname !== "/s2/favicons") {
+        const params = new URLSearchParams({ url });
         params.set("src", iconUrl.toString());
+        return `/api/project-icon?${params.toString()}`;
       }
     } catch {
-      // Fall through to the project URL favicon.
+      // Fall through to the local static icon.
     }
   }
 
-  return `/api/project-icon?${params.toString()}`;
+  return staticProjectIconUrl(project.slug);
 }
 
 function projectTitle(project: Pick<PublicLeaderboardEntry, "name" | "url">) {
@@ -77,7 +101,7 @@ function DeferredProjectLogo({
   priority = false,
   compact = false,
 }: {
-  project: Pick<PublicLeaderboardEntry, "logoUrl" | "url">;
+  project: Pick<PublicLeaderboardEntry, "logoUrl" | "slug" | "url">;
   title: string;
   priority?: boolean;
   compact?: boolean;
